@@ -1,61 +1,72 @@
-# Aplikasi Antrian General Static
+# 🚚 Aplikasi Antrian Delivery
 
-Aplikasi Antrian merupakan sistem manajemen yang digunakan untuk mengelola antrian pengunjung pada suatu perusahaan atau instansi. Aplikasi antrian dapat digunakan sebagai sarana untuk mencapai kinerja efektif dan efisien bagi perusahaan atau instansi dalam melayani pengunjung.
+**Aplikasi Antrian Delivery** adalah sistem manajemen antrian berbasis web yang dirancang untuk mengelola alur pendaftaran, panggilan, hingga pemantauan driver/supplier secara efektif dan *real-time*. Sistem ini membantu meningkatkan efisiensi kinerja operasional dalam melayani pengunjung maupun driver di lingkungan instansi atau perusahaan.
 
-**Aplikasi ini dibangun dengan :**
+---
 
-- Menggunakan bahasa pemrograman **PHP 7.\*** / Newer.
-- Menggunakan database management system **MySQL** atau **MariaDB**.
-- Menggunakan **MySQLi Extension** untuk berkomunikasi dengan database.
-- Menggunakan framework CSS **Bootstrap 5** untuk membuat desain tampilan aplikasi.
-- Menggunakan **jQuery AJAX** untuk proses CRUD.
-- Menggunakan **API** teks berbicara dalam bahasa Indonesia dari **ResponsiveVoice.JS** untuk suara panggilan antrian.
-- Menggunakan **Rachet PHP WebSocket** untuk server listener panggilan suara pada monitor dashboard antrian.
-- Menggunakan **Mike42/EscPrinter** untuk print struck antrian 
+## 🛠️ Teknologi yang Digunakan
 
-# Fitur Apilkasi
+Aplikasi ini dibangun menggunakan teknologi dan pustaka berikut:
 
-Aplikasi Antrian ini terdiri dari 4 interface, yaitu **Nomor Antrian**, **Panggilan Antrian** **Monitor Antrian** dan **Setting Aplikasi Antrian**.
+- **Bahasa Pemrograman:** PHP 7.4 / PHP 8.x
+- **Database Management System:** MySQL / MariaDB (via MySQLi Extension)
+- **Frontend Framework:** Bootstrap 5 & Bootstrap Icons
+- **Interaktivitas & CRUD:** jQuery AJAX & SweetAlert2
+- **Audio Panggilan:** ResponsiveVoice.JS (Teks ke suara Bahasa Indonesia)
+- **Realtime Engine:** Ratchet PHP WebSocket (Server listener untuk sinkronisasi pemanggilan ke layar monitor)
+- **Direct Printing:** `mike42/escpos-php` (Untuk mencetak struk antrian ke printer thermal POS)
+- **Server Environment:** Laragon (Sangat direkomendasikan) / XAMPP
 
-### 1. Nomor Antrian
+---
 
-Halaman Nomor Antrian digunakan pengunjung untuk mengambil nomor antrian. Fitur ini bisa Kamu kembangkan lagi dengan menambahkan fungsi cetak nomor antrian secara langsung ke printer POS 88Cm.
+## 🚀 Fitur Utama & Interface
 
-### 2. Panggilan Antrian
+### 1. 🎫 Nomor Antrian (Pendaftaran)
+Halaman yang digunakan oleh pengunjung/driver untuk mengambil nomor antrian sesuai kategori. Fitur ini dapat dihubungkan langsung ke printer POS untuk cetak struk antrian fisik secara otomatis.
 
-Halaman Panggilan Antrian digunakan petugas loket untuk memanggil antrian pengunjung. Halaman ini menampilkan informasi jumlah antrian, nomor antrian yang sedang dipanggil nomor antrian selanjutnya yang akan dipanggil, sisa antrian yang belum dipanggil. Petugas loket dapat menekan tombol panggilan antrian pada layar untuk memanggil antrian dengan menggunakan suara yang bisa dihubungkan dengan alat pengeras suara.
+### 2. 📢 Panggilan Antrian (Dashboard Loket)
+Halaman kontrol bagi petugas loket untuk memanggil antrian. Menampilkan informasi jumlah antrian, nomor antrian aktif, antrian berikutnya, serta sisa antrian. Dilengkapi dengan **fitur panggil ulang (recall)** dan tombol pemanggil suara otomatis yang terhubung ke pengeras suara.
 
-### 3. Monitor Antrian
+### 3. 🖥️ Monitor Antrian
+Halaman layar besar (TV/Display) yang menampilkan status antrian secara *real-time* sekaligus mengeluarkan audio panggilan suara saat petugas loket menekan tombol panggil.
 
-Halaman monitor antrian digunakan untuk menampilkan dashboard antrian dan untuk mengeluarkan suara antrian yang sedang dipanggil oleh petugas loket antrian
+### 4. 🏢 Kelola Master Customer & History
+Fasilitas untuk mengelola data perusahaan/supplier (input manual & import file) dengan proteksi duplikasi data, serta pencatatan riwayat antrian secara rinci.
 
-### 3. Setting Aplikasi Antrian
+### 5. ⚙️ Setting Aplikasi Antrian
+Halaman konfigurasi untuk menyesuaikan nama aplikasi, logo, jumlah loket, hingga tampilan styling dashboard monitor.
 
-Halaman Setting Aplikasi Antrian untuk memudahkan dalam configurasi aplikasi seperti nama aplikasi, logo, loket, styling dashboard monitor antrian
+---
 
-# Cara Install
+## ⚙️ Cara Instalasi & Jalankan Proyek
 
-## Siapkan system requirment berikut
-
-- Xampp / Laragon (Rekomended)
-- PHP 7.3 >= Newer
-- MYSQL / MARIADB
+### 1. System Requirements
+- Laragon (Rekomendasi Utama) / XAMPP
+- PHP 7.4 atau lebih baru
+- MySQL / MariaDB
 - Composer
 
-## Configurasi
-- Jalankan **composes install**
-- Akses aplikasi antrian
-- Login default static Setting Aplikasi Antrian
-    Username : superadmin
-    Password : superadmin@123
-  
-# Support me
-Donation to give me a Gift   
-Saweria : https://saweria.co/aderahman007
+### 2. Langkah Instalasi
 
-Follow me :  
-**Instagram** : [@aderahman_007](https://www.instagram.com/aderahman_007) || [@adeofficial007](https://www.instagram.com/adeofficial007)
+1. **Clone Repository:**
+   Buka terminal/Git Bash, lalu jalankan perintah berikut:
+   `git clone https://github.com/Hikari098/aplikasi-antrian-delivery.git`
 
-#### Script MIT Lisence
-Aplikasi ini bersifat **Open Source** siapa pun dapat menggunakan, mengembangkan dan berkontribusi.
-Dilarang keras untuk memperjual belikan/mengambil keuntungan dari aplikasi ini dalam bentuk apapun tanpa seizin Developper.
+2. **Install Dependensi Composer:**
+   Masuk ke folder proyek via terminal, lalu jalankan:
+   `composer install`
+
+3. **Setup Database:**
+   - Buat database baru di MySQL/HeidiSQL/phpMyAdmin (misalnya: `db_antrian`).
+   - Import file `database/antrian_delivery.sql` ke dalam database tersebut.
+
+4. **Konfigurasi Database:**
+   - Salin file `config/database.php.example` menjadi `config/database.php`.
+   - Sesuaikan host, username, password, dan nama database dengan server lokal Anda.
+
+5. **Jalankan Aplikasi:**
+   - Buka browser dan akses aplikasi melalui `http://localhost/aplikasi-antrian/` (atau domain lokal Laragon).
+
+6. **Akses Login Default:**
+   - **Username:** `superadmin`
+   - **Password:** `superadmin@123`
