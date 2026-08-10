@@ -1,268 +1,288 @@
+<?php
+// Pastikan koneksi database tersedia di awal halaman panggilan
+require_once "../../config/database.php";
+
+date_default_timezone_set("Asia/Jakarta");
+$tanggal = date("Y-m-d");
+
+// Mengambil parameter loket yang aktif dibuka oleh petugas
+$loket_aktif = isset($_GET['loket']) ? mysqli_real_escape_string($mysqli, $_GET['loket']) : '';
+?>
 <!doctype html>
 <html lang="en" class="h-100">
 
 <head>
-    <!-- Required meta tags -->
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <meta name="description" content="Aplikasi Antrian General Static">
-    <meta name="author" content="Ade Rahman">
+    <meta name="description" content="Aplikasi Antrian Delivery">
+    <meta name="author" content="hikaritecho">
 
-    <!-- Title -->
-    <title>Aplikasi Antrian General Static</title>
+    <title>Halaman Panggilan Antrian</title>
 
-    <!-- Favicon icon -->
-    <link href="../../assets/img/favicon.ico" type="image/x-icon" rel="shortcut icon">
-
-    <!-- Bootstrap CSS -->
+    <link href="../../assets/img/LOGO%20PMTI.jpg" type="image/jpeg" rel="icon">
     <link href="../../assets/vendor/css/bootstrap.min.css" rel="stylesheet">
-
-    <!-- Bootstrap Icons -->
-    <link href="../../assets/vendor/css/bootstrap-icons.css" rel="stylesheet">
-
-    <!-- Font -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
     <link href="../../assets/vendor/css/swap.css" rel="stylesheet">
-
-    <!-- DataTables -->
-    <link href="../../assets/vendor/css/datatables.min.css" type="text/css" rel="stylesheet">
-
-    <!-- Custom Style -->
-    <link href="../../assets/css/style.css" rel="stylesheet">
+    <link rel="stylesheet" href="../../assets/css/style.css">
 </head>
 
-<body class="d-flex flex-column h-100">
+<body class="d-flex flex-column h-100 bg-light">
+    
+    <nav class="navbar navbar-expand-md navbar-dark bg-success shadow-sm py-3">
+        <div class="container-fluid px-4">
+            <span class="navbar-brand fw-bold fs-4">
+                <i class="bi-megaphone-fill me-2"></i> KONTROL PANGGILAN ANTRIAN
+            </span>
+            <div class="d-flex align-items-center text-white fw-bold">
+                <button type="button" class="btn btn-warning fw-bold border-white text-dark me-3 rounded-pill px-3 shadow-sm" data-bs-toggle="modal" data-bs-target="#modalPilihMonitor">
+                    <i class="bi-tv-fill me-1"></i> Buka Layar Monitor TV
+                </button>
+                <span class="bg-dark bg-opacity-25 px-3 py-2 rounded-3">
+                    <i class="bi-calendar3 me-2"></i> <?php echo date('d-m-Y'); ?>
+                </span>
+            </div>
+        </div>
+    </nav>
+
     <main class="flex-shrink-0">
-        <div class="container pt-4">
-            <div class="d-flex flex-column flex-md-row px-4 py-3 mb-4 bg-white rounded-2 shadow-sm">
-                <!-- judul halaman -->
-                <div class="d-flex align-items-center me-md-auto">
-                    <i class="bi-mic-fill text-success me-3 fs-3"></i>
-                    <h1 class="h5 pt-2">Panggilan Antrian <span class="namaLoket"></span></h1>
+        <div class="container-fluid pt-3 px-4">
+            
+            <nav aria-label="breadcrumb" class="mb-3">
+                <ol class="breadcrumb bg-white px-3 py-2 rounded-3 shadow-sm d-inline-flex mb-0 border-start border-warning border-3">
+                    <li class="breadcrumb-item">
+                        <a href="../../index.php" class="text-success fw-bold text-decoration-none">
+                            <i class="bi-house-door-fill me-1"></i> Home
+                        </a>
+                    </li>
+                    <li class="breadcrumb-item active fw-bold text-secondary" aria-current="page">Panggilan</li>
+                </ol>
+            </nav>
+            
+            <?php if (empty($loket_aktif)): ?>
+                <div class="row justify-content-center pt-4">
+                    <div class="col-lg-6 text-center">
+                        <div class="card border-0 shadow-sm p-5 bg-white rounded-3">
+                            <p class="text-muted mb-4">Silakan pilih loket yang ingin Anda operasikan hari ini agar sistem dapat memfilter data antrian secara akurat.</p>
+                            <div class="d-grid gap-2">
+                                <a href="?loket=11" class="btn btn-success btn-lg fw-bold py-3 text-start px-4 mb-2 shadow-sm rounded-3"><i class="bi-cpu me-3 fs-5"></i> Buka Kontrol: HT & ISONITE</a>
+                                <a href="?loket=12" class="btn btn-success btn-lg fw-bold py-3 text-start px-4 mb-2 shadow-sm rounded-3"><i class="bi-layers me-3 fs-5"></i> Buka Kontrol: PHOSPHATE COATING</a>
+                                <a href="?loket=13" class="btn btn-success btn-lg fw-bold py-3 text-start px-4 mb-2 shadow-sm rounded-3"><i class="bi-box-seam me-3 fs-5"></i> Buka Kontrol: RAW MATERIAL</a>
+                                <a href="?loket=14" class="btn btn-success btn-lg fw-bold py-3 text-start px-4 mb-2 shadow-sm rounded-3"><i class="bi-person-workspace me-3 fs-5"></i> Buka Kontrol: AUDIT / MEETING</a>
+                                <a href="?loket=15" class="btn btn-success btn-lg fw-bold py-3 text-start px-4 mb-2 shadow-sm rounded-3"><i class="bi-truck me-3 fs-5"></i> Buka Kontrol: SUPPLIER</a>
+                            </div>
+                        </div>
+                    </div>
                 </div>
-                <!-- breadcrumbs -->
-                <div class="ms-5 ms-md-0 pt-md-3 pb-md-0">
-                    <nav style="--bs-breadcrumb-divider: '>';" aria-label="breadcrumb">
-                        <ol class="breadcrumb">
-                            <li class="breadcrumb-item"><a href="/"><i class="bi-house-fill text-success"></i></a></li>
-                            <li class="breadcrumb-item" aria-current="page">Antrian</li>
-                        </ol>
-                    </nav>
-                </div>
-            </div>
+            <?php else: ?>
 
-            <div class="row">
-                <!-- menampilkan informasi jumlah antrian -->
-                <div class="col-md-3 mb-4">
-                    <div class="card border-0 shadow-sm">
-                        <div class="card-body p-4">
-                            <div class="d-flex justify-content-start">
-                                <div class="feature-icon-3 me-4">
-                                    <i class="bi-people text-warning"></i>
-                                </div>
-                                <div>
-                                    <p id="jumlah-antrian" class="fs-3 text-warning mb-1"></p>
-                                    <p class="mb-0">Jumlah Antrian</p>
-                                </div>
+                <div class="row mb-4">
+                    <div class="col-12">
+                        <div class="bg-white rounded-3 shadow-sm p-3 border-start border-success border-4 d-flex align-items-center justify-content-between">
+                            <div>
+                                <h5 class="text-muted mb-0 font-monospace text-uppercase fw-bold">Loket Operasional Saat Ini:</h5>
+                                <h2 class="text-success fw-bold mb-0">
+                                    <?php 
+                                        if ($loket_aktif == '11') echo "HT & ISONITE";
+                                        elseif ($loket_aktif == '12') echo "PHOSPHATE COATING";
+                                        elseif ($loket_aktif == '13') echo "RAW MATERIAL";
+                                        elseif ($loket_aktif == '14') echo "AUDIT / MEETING";
+                                        elseif ($loket_aktif == '15') echo "SUPPLIER";
+                                        else echo "LOKET TIDAK DIKENAL";
+                                    ?>
+                                </h2>
                             </div>
+                            <a href="index.php" class="btn btn-outline-danger btn-sm fw-bold px-3"><i class="bi-arrow-left-right me-1"></i> Ganti Loket</a>
                         </div>
                     </div>
                 </div>
-                <!-- menampilkan informasi nomor antrian yang sedang dipanggil -->
-                <div class="col-md-3 mb-4">
-                    <div class="card border-0 shadow-sm">
-                        <div class="card-body p-4">
-                            <div class="d-flex justify-content-start">
-                                <div class="feature-icon-3 me-4">
-                                    <i class="bi-person-check text-success"></i>
-                                </div>
-                                <div>
-                                    <p id="antrian-sekarang" class="fs-3 text-success mb-1"></p>
-                                    <p class="mb-0">Antrian Sekarang</p>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-                <!-- menampilkan informasi nomor antrian yang akan dipanggil selanjutnya -->
-                <div class="col-md-3 mb-4">
-                    <div class="card border-0 shadow-sm">
-                        <div class="card-body p-4">
-                            <div class="d-flex justify-content-start">
-                                <div class="feature-icon-3 me-4">
-                                    <i class="bi-person-plus text-info"></i>
-                                </div>
-                                <div>
-                                    <p id="antrian-selanjutnya" class="fs-3 text-info mb-1"></p>
-                                    <p class="mb-0">Antrian Selanjutnya</p>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-                <!-- menampilkan informasi jumlah antrian yang belum dipanggil -->
-                <div class="col-md-3 mb-4">
-                    <div class="card border-0 shadow-sm">
-                        <div class="card-body p-4">
-                            <div class="d-flex justify-content-start">
-                                <div class="feature-icon-3 me-4">
-                                    <i class="bi-person text-danger"></i>
-                                </div>
-                                <div>
-                                    <p id="sisa-antrian" class="fs-3 text-danger mb-1"></p>
-                                    <p class="mb-0">Sisa Antrian</p>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
 
-            <div class="card border-0 shadow-sm">
-                <div class="card-body p-4">
-                    <div class="table-responsive">
-                        <table id="tabel-antrian" class="table table-bordered table-striped table-hover" width="100%">
-                            <thead>
-                                <tr>
-                                    <th>Nomor Antrian</th>
-                                    <th>Status</th>
-                                    <th>Panggil</th>
-                                </tr>
-                            </thead>
-                        </table>
+                <div class="row mb-4">
+                    <div class="col-md-3">
+                        <div class="card border-0 shadow-sm bg-white text-dark rounded-3 p-3 text-center mb-3">
+                            <h6 class="text-muted fw-bold">JUMLAH ANTRIAN</h6>
+                            <h1 id="jumlah_antrian" class="display-3 fw-bold text-primary my-2">0</h1>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="card border-0 shadow-sm bg-white text-dark rounded-3 p-3 text-center mb-3">
+                            <h6 class="text-muted fw-bold">ANTRIAN SEKARANG</h6>
+                            <h1 id="antrian_sekarang" class="display-3 fw-bold text-success my-2">-</h1>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="card border-0 shadow-sm bg-white text-dark rounded-3 p-3 text-center mb-3">
+                            <h6 class="text-muted fw-bold">ANTRIAN SELANJUTNYA</h6>
+                            <h1 id="antrian_selanjutnya" class="display-3 fw-bold text-warning my-2">-</h1>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="card border-0 shadow-sm bg-white text-dark rounded-3 p-3 text-center mb-3">
+                            <h6 class="text-muted fw-bold">SISA ANTRIAN</h6>
+                            <h1 id="sisa_antrian" class="display-3 fw-bold text-danger my-2">0</h1>
+                        </div>
                     </div>
                 </div>
-            </div>
+
+                <div class="card border-0 shadow-sm rounded-3 bg-white mb-5">
+                    <div class="card-body p-4">
+                        <div class="d-flex justify-content-between align-items-center mb-3">
+                            <h5 class="fw-bold text-dark mb-0"><i class="bi-list-ul me-2"></i>Daftar Urutan Driver Mengantri</h5>
+                        </div>
+                        <div class="table-responsive">
+                            <table class="table table-hover align-middle border-top" id="tabelAntrian">
+                                <thead class="table-light fw-bold text-secondary">
+                                    <tr>
+                                        <th width="10%">Nomor</th>
+                                        <th>Nama Customer</th>
+                                        <th>Nama Driver</th>
+                                        <th>Plat Nomor</th>
+                                        <th width="20%" class="text-center">Aksi Panggilan</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            <?php endif; ?>
         </div>
     </main>
 
-    <!-- Footer -->
-    <footer class="footer mt-auto py-4">
-        <div class="container">
-            <hr class="my-4">
-            <!-- copyright -->
-            <div class="copyright text-center mb-2 mb-md-0">&copy; <?php date('Y') ?> - <a href="https://paperlesshospital.id" target="_blank" class="text-brand text-decoration-none">paperlesshospital.id</a>. All rights reserved.
+    <div class="modal fade" id="modalPilihMonitor" tabindex="-1" aria-labelledby="modalPilihMonitorLabel" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content border-0 shadow-lg rounded-3">
+                <div class="modal-header bg-success text-white py-3">
+                    <h5 class="modal-title fw-bold" id="modalPilihMonitorLabel"><i class="bi-display me-2"></i> PILIH LAYAR MONITOR TV</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body p-4 bg-light">
+                    <p class="text-muted small mb-3">Silakan pilih layar monitor sesuai alur loket tujuan untuk ditampilkan di layar TV:</p>
+                    <div class="d-grid gap-2">
+                        <a href="../monitor/index.php?loket=11" target="_blank" class="btn btn-outline-success text-start fw-bold py-3 px-4 shadow-sm rounded-3"><i class="bi-cpu me-3 fs-5"></i> Monitor: HT & ISONITE</a>
+                        <a href="../monitor/index.php?loket=12" target="_blank" class="btn btn-outline-success text-start fw-bold py-3 px-4 shadow-sm rounded-3"><i class="bi-layers me-3 fs-5"></i> Monitor: PHOSPHATE COATING</a>
+                        <a href="../monitor/index.php?loket=13" target="_blank" class="btn btn-outline-success text-start fw-bold py-3 px-4 shadow-sm rounded-3"><i class="bi-box-seam me-3 fs-5"></i> Monitor: RAW MATERIAL</a>
+                        <a href="../monitor/index.php?loket=14" target="_blank" class="btn btn-outline-success text-start fw-bold py-3 px-4 shadow-sm rounded-3"><i class="bi-person-workspace me-3 fs-5"></i> Monitor: AUDIT / MEETING</a>
+                        <a href="../monitor/index.php?loket=15" target="_blank" class="btn btn-outline-success text-start fw-bold py-3 px-4 shadow-sm rounded-3"><i class="bi-truck me-3 fs-5"></i> Monitor: SUPPLIER</a>
+                    </div>
+                </div>
             </div>
+        </div>
+    </div>
+
+    <footer class="footer mt-auto py-3 bg-white border-top shadow-sm">
+        <div class="container-fluid text-center">
+            <span class="text-muted small">&copy; <?php echo date('Y'); ?> - <span class="fw-bold text-success">hikaritecho</span>. All rights reserved.</span>
         </div>
     </footer>
 
-    <!-- jQuery Core -->
     <script src="../../assets/vendor/js/jquery-3.6.0.min.js" type="text/javascript"></script>
-    <!-- Popper and Bootstrap JS -->
-    <script src="../../assets/vendor/js/popper.min.js" type="text/javascript"></script>
-    <!-- Bootstrap JS -->
     <script src="../../assets/vendor/js/bootstrap.min.js" type="text/javascript"></script>
 
-    <!-- DataTables -->
-    <script src="../../assets/vendor/js/datatables.min.js" type="text/javascript"></script>
-    <!-- Responsivevoice -->
-
+    <?php if (!empty($loket_aktif)): ?>
     <script type="text/javascript">
         $(document).ready(function() {
-            var loket = localStorage.getItem('_loket');
-            $(".namaLoket").html(' Loket ' + loket);
-            // tampilkan informasi antrian
-            $('#jumlah-antrian').load('get_jumlah_antrian.php');
-            $('#antrian-sekarang').load('get_antrian_sekarang.php');
-            $('#antrian-selanjutnya').load('get_antrian_selanjutnya.php');
-            $('#sisa-antrian').load('get_sisa_antrian.php');
+            var loket = "<?php echo $loket_aktif; ?>";
 
-            // menampilkan data antrian menggunakan DataTables
-            var table = $('#tabel-antrian').DataTable({
-                "lengthChange": false, // non-aktifkan fitur "lengthChange"
-                "searching": false, // non-aktifkan fitur "Search"
-                "ajax": "get_antrian.php", // url file proses tampil data dari database
-                // menampilkan data
-                "columns": [{
-                        "data": "no_antrian",
-                        "width": '200px',
-                        "orderable": false,
-                        "searchable": false,
-                        "className": 'text-center',
-                        render: function(data) {
-                            return '<b>' + data + '</b>'
-                        }
-                    },
-                    {
-                        "data": "status",
-                        "visible": false
-                    },
-                    {
-                        "data": null,
-                        "orderable": false,
-                        "searchable": false,
-                        "width": '100px',
-                        "className": 'text-center',
-                        "render": function(data, type, row) {
-                            // jika tidak ada data "status"
-                            if (data["status"] === "") {
-                                // sembunyikan button panggil
-                                var btn = "-";
-                            }
-                            // jika data "status = 0"
-                            else if (data["status"] === "0") {
-                                // tampilkan button panggil
-                                var btn = "<button class=\"btn btn-success btn-sm rounded-circle\"><i class=\"bi-mic-fill\"></i></button>";
-                            }
-                            // jika data "status = 1"
-                            else if (data["status"] === "1") {
-                                // tampilkan button ulangi panggilan
-                                var btn = "<button class=\"btn btn-secondary btn-sm rounded-circle\"><i class=\"bi-mic-fill\"></i></button>";
-                            };
-                            return btn;
-                        }
-                    },
-                ],
-                "order": [
-                    [0, "desc"] // urutkan data berdasarkan "no_antrian" secara descending
-                ],
-                "iDisplayLength": 10, // tampilkan 10 data per halaman
-            });
+            function loadCounter() {
+                $('#jumlah_antrian').load('get_jumlah_antrian.php?loket=' + loket + '&v=' + Math.random());
+                $('#antrian_sekarang').load('get_antrian_sekarang.php?loket=' + loket + '&v=' + Math.random());
+                $('#antrian_selanjutnya').load('get_antrian_selanjutnya.php?loket=' + loket + '&v=' + Math.random());
+                $('#sisa_antrian').load('get_sisa_antrian.php?loket=' + loket + '&v=' + Math.random());
+            }
 
-            // panggilan antrian dan update data
-            $('#tabel-antrian tbody').on('click', 'button', function() {
-                // ambil data dari datatables 
-                var data = table.row($(this).parents('tr')).data();
-                // buat variabel untuk menampilkan data "id"
-                var id = data["id"];
-
-                // proses create panggilan antrian
+            function loadTabel() {
                 $.ajax({
-                    url: "create_panggilan.php", // url file proses update data
-                    type: "POST", // mengirim data dengan method POST
-                    // tentukan data yang dikirim
+                    type: 'GET',
+                    url: 'get_antrian.php',
+                    data: { loket: loket, v: Math.random() },
                     dataType: 'json',
-                    data: {
-                        antrian: data["no_antrian"],
-                        loket: loket
-                    },
-                    async: false,
-                    cache: false,
-                    success: function(data) {
-                        console.log(data);
+                    success: function(response) {
+                        var html = '';
+                        if (response.data && response.data.length > 0 && response.data[0].no_antrian !== '-') {
+                            $.each(response.data, function(i, val) {
+                                var custName = val.nama_customer ? val.nama_customer : '-';
+                                var driverName = val.nama_driver ? val.nama_driver : '-';
+
+                                html += '<tr>';
+                                html += '<td class="fw-bold fs-5 text-success">' + val.no_antrian + '</td>';
+                                html += '<td class="fw-bold text-dark">' + custName + '</td>'; 
+                                html += '<td>' + driverName + '</td>';
+                                html += '<td class="fw-bold text-uppercase">' + val.plat_nomor + '</td>';
+                                
+                                // LOGIKA PANGGIL DAN PANGGIL ULANG
+                                if(val.status === '0') {
+                                    // Belum dipanggil sama sekali
+                                    html += '<td class="text-center">';
+                                    html += '<button class="btn btn-success btn-sm btn-panggil px-3 fw-bold rounded-pill shadow-sm" data-id="'+val.id+'" data-no="'+val.no_antrian+'">';
+                                    html += '<i class="bi-megaphone me-1"></i> Panggil';
+                                    html += '</button>';
+                                    html += '</td>';
+                                } else {
+                                    // Sudah dipanggil -> Menampilkan Tombol Panggil Ulang (Warna Kuning)
+                                    html += '<td class="text-center">';
+                                    html += '<button class="btn btn-warning btn-sm btn-panggil-ulang px-3 fw-bold rounded-pill text-dark shadow-sm me-1" data-id="'+val.id+'" data-no="'+val.no_antrian+'" title="Putar ulang panggilan suara di TV">';
+                                    html += '<i class="bi-arrow-clockwise me-1"></i> Panggil Ulang';
+                                    html += '</button>';
+                                    html += '</td>';
+                                }
+                                html += '</tr>';
+                            });
+                        } else {
+                            html = '<tr><td colspan="5" class="text-center text-muted py-4 font-monospace">Belum ada antrian yang terdaftar di loket ini hari ini.</td></tr>';
+                        }
+                        $('#tabelAntrian tbody').html(html);
                     }
                 });
+            }
 
-                // proses update data
+            // AKSI PANGGIL PERTAMA KALI
+            $(document).on('click', '.btn-panggil', function() {
+                var id = $(this).data('id');
+                var no = $(this).data('no');
+                
                 $.ajax({
-                    type: "POST", // mengirim data dengan method POST
-                    url: "update.php", // url file proses update data
-                    // tentukan data yang dikirim
-                    data: {
-                        id: id
+                    type: 'POST',
+                    url: 'update.php',
+                    data: { id: id },
+                    success: function() {
+                        $.ajax({
+                            type: 'POST',
+                            url: 'create_panggilan.php',
+                            data: { antrian: no, loket: loket },
+                            success: function() {
+                                loadCounter();
+                                loadTabel();
+                            }
+                        });
                     }
                 });
             });
 
-            // auto reload data antrian setiap 1 detik untuk menampilkan data secara realtime
+            // AKSI PANGGIL ULANG (RECALL)
+            $(document).on('click', '.btn-panggil-ulang', function() {
+                var no = $(this).data('no');
+                
+                // Langsung mentrigger suara panggilan ke TV Monitor tanpa mengubah status lagi
+                $.ajax({
+                    type: 'POST',
+                    url: 'create_panggilan.php',
+                    data: { antrian: no, loket: loket },
+                    success: function() {
+                        loadCounter();
+                        loadTabel();
+                    }
+                });
+            });
+
+            loadCounter();
+            loadTabel();
             setInterval(function() {
-                $('#jumlah-antrian').load('get_jumlah_antrian.php').fadeIn("slow");
-                $('#antrian-sekarang').load('get_antrian_sekarang.php').fadeIn("slow");
-                $('#antrian-selanjutnya').load('get_antrian_selanjutnya.php').fadeIn("slow");
-                $('#sisa-antrian').load('get_sisa_antrian.php').fadeIn("slow");
-                table.ajax.reload(null, false);
-            }, 1000);
+                loadCounter();
+                loadTabel();
+            }, 3000);
         });
     </script>
+    <?php endif; ?>
 </body>
-
 </html>

@@ -1,49 +1,52 @@
 <?php
-// Mengatasi CORS
 header('Access-Control-Allow-Origin: *');
 header('Access-Control-Allow-Credentials: true');
 header("Access-Control-Allow-Headers: X-API-KEY, Origin, x-requested-with, Content-Type, Accept, Access-Control-Request-Method");
 header('Access-Control-Allow-Methods: GET, POST');
 header("Allow: GET, POST");
-require 'cetak.php';
-// pengecekan ajax request untuk mencegah direct access file, agar file tidak bisa diakses secara langsung dari browser
-// jika ada ajax request
-if (isset($_SERVER['REQUEST_METHOD']) && $_SERVER['REQUEST_METHOD'] == 'POST') {
-    // panggil file "database.php" untuk koneksi ke database
-    require_once "../../config/database.php";
 
-    // ambil tanggal sekarang
-    $tanggal = gmdate("Y-m-d", time() + 60 * 60 * 7);
-
-    // membuat "no_antrian"
-    // sql statement untuk menampilkan data "no_antrian" terakhir pada tabel "queue_antrian_admisi" berdasarkan "tanggal"
-    $query = mysqli_query($mysqli, "SELECT max(no_antrian) as nomor FROM queue_antrian_admisi WHERE tanggal='$tanggal'") or die('Ada kesalahan pada query tampil data : ' . mysqli_error($mysqli));
-    // ambil jumlah baris data hasil query
-    $rows = mysqli_num_rows($query);
-
-    // cek hasil query
-    // jika "no_antrian" sudah ada
-    if ($rows <> 0) {
-        // ambil data hasil query
-        $data = mysqli_fetch_assoc($query);
-        // "no_antrian" = "no_antrian" yang terakhir + 1
-        $no_antrian = sprintf("%03s", (int)$data['nomor'] + 1);
-    }
-    // jika "no_antrian" belum ada
-    else {
-        // "no_antrian" = 1
-        $no_antrian = sprintf("%03s", 1);
-    }
-
-    // sql statement untuk insert data ke tabel "queue_antrian_admisi"
-    $insert = mysqli_query($mysqli, "INSERT INTO queue_antrian_admisi(tanggal, no_antrian) VALUES('$tanggal', '$no_antrian')") or die('Ada kesalahan pada query insert : ' . mysqli_error($mysqli));
-    // cek query
-    // jika proses insert berhasil
-    if ($insert) {
-        // tampilkan pesan sukses insert data
-        echo "Sukses";
-        
-        // Cetak antrian
-        cetak ($no_antrian);
-    }
+if (file_exists("../../config/database.php")) {
+    include_once "../../config/database.php";
 }
+
+$conn = null;
+if (isset($mysqli) && $mysqli instanceof mysqli) { $conn = $mysqli; }
+elseif (isset($db) && $db instanceof mysqli) { $conn = $db; }
+elseif (isset($koneksi) && $koneksi instanceof mysqli) { $conn = $koneksi; }
+
+if (!$conn || $conn->connect_error) {
+    echo "Gagal koneksi database!";
+    exit;
+}
+
+$nama_customer = isset($_POST['nama_customer']) ? mysqli_real_escape_string($conn, trim($_POST['nama_customer'])) : '';
+$nama_driver   = isset($_POST['nama_driver']) ? mysqli_real_escape_string($conn, trim($_POST['nama_driver'])) : '';
+$plat_nomor    = isset($_POST['plat_nomor']) ? mysqli_real_escape_string($conn, strtoupper(trim($_POST['plat_nomor']))) : '';
+$id_loket      = isset($_POST['id_loket']) ? mysqli_real_escape_string($conn, trim($_POST['id_loket'])) : ''; 
+
+date_default_timezone_set("Asia/Jakarta");
+$tanggal = date("Y-m-d");
+
+// Bersihkan data live hari kemarin agar penomoran mereset dari 1 setiap pagi
+mysqli_query($conn, "DELETE FROM queue_antrian_admisi WHERE tanggal < '$tanggal'");
+
+// Hitung nomor urutan antrian berjalan hari ini
+$query = mysqli_query($conn, "SELECT COUNT(*) as total FROM queue_antrian_admisi WHERE tanggal='$tanggal'");
+$data = mysqli_fetch_assoc($query);
+$total_antrian = ($data) ? (int)$data['total'] : 0;
+$no_antrian = $total_antrian + 1;
+
+// FIX UTAMA: Menghapus id_loket dari query INSERT tabel admisi karena kolom tersebut tidak ada di struktur database kamu
+$insert = mysqli_query($conn, "INSERT INTO queue_antrian_admisi(tanggal, no_antrian, status, nama_customer, nama_driver, plat_nomor) 
+                               VALUES('$tanggal', '$no_antrian', '0', '$nama_customer', '$nama_driver', '$plat_nomor')");
+          
+if ($insert) {
+    // History tetap mencatat id_loket dengan aman karena kolomnya terdaftar resmi di DB kamu
+    mysqli_query($conn, "INSERT INTO queue_antrian_history(tanggal, no_antrian, nama_customer, nama_driver, plat_nomor, id_loket) 
+                         VALUES('$tanggal', '$no_antrian', '$nama_customer', '$nama_driver', '$plat_nomor', '$id_loket')");
+    
+    echo "Sukses";
+} else {
+    echo "Gagal Query Utama: " . mysqli_error($conn);
+}
+?>

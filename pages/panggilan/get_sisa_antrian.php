@@ -1,20 +1,18 @@
 <?php
-// pengecekan ajax request untuk mencegah direct access file, agar file tidak bisa diakses secara langsung dari browser
-// jika ada ajax request
 if (isset($_SERVER['HTTP_X_REQUESTED_WITH']) && ($_SERVER['HTTP_X_REQUESTED_WITH'] == 'XMLHttpRequest')) {
-    // panggil file "database.php" untuk koneksi ke database
     require_once "../../config/database.php";
 
-    // ambil tanggal sekarang
-    $tanggal = gmdate("Y-m-d", time() + 60 * 60 * 7);
+    date_default_timezone_set("Asia/Jakarta");
+    $tanggal = date("Y-m-d");
+    $loket_aktif = isset($_GET['loket']) ? mysqli_real_escape_string($mysqli, $_GET['loket']) : '';
 
-    // sql statement untuk menampilkan jumlah data dari tabel "queue_antrian_admisi" berdasarkan "tanggal" dan "status = 0"
-    $query = mysqli_query($mysqli, "SELECT count(id) as jumlah FROM queue_antrian_admisi WHERE tanggal='$tanggal' AND status='0'") or die('Ada kesalahan pada query tampil data : ' . mysqli_error($mysqli));
-    // ambil data hasil query
+    $query = mysqli_query($mysqli, "SELECT COUNT(a.id) as sisa FROM queue_antrian_admisi a 
+                                    INNER JOIN queue_antrian_history h ON a.tanggal = h.tanggal AND a.no_antrian = h.no_antrian
+                                    WHERE a.tanggal='$tanggal' AND a.status='0' AND h.id_loket='$loket_aktif'") or die(mysqli_error($mysqli));
+    
     $data = mysqli_fetch_assoc($query);
-    // buat variabel untuk menampilkan data
-    $sisa_antrian = $data['jumlah'];
+    $sisa = ($data) ? (int)$data['sisa'] : 0;
 
-    // tampilkan data
-    echo number_format($sisa_antrian, 0, '', '.');
+    echo number_format($sisa, 0, '', '');
 }
+?>

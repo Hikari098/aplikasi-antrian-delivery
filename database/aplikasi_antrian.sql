@@ -135,3 +135,4 @@ INSERT INTO `queue_setting` (`id`, `nama_instansi`, `logo`, `alamat`, `telpon`, 
 COMMIT;
 
 SET FOREIGN_KEY_CHECKS = 1;
+queue_antrian_admisiqueue_antrian_admisi

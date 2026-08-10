@@ -1,16 +1,16 @@
 <?php
-// deklarasi parameter koneksi database
-$host     = "localhost";                // server database, default “localhost” atau “127.0.0.1”
-$username = "root";                     // username database, default “root”
-$password = "root";                         // password database, default kosong
-$database = "aplikasi_antrian";               // memilih database yang akan digunakan
+$db_host        = "localhost";
+$db_user        = "root";
+$db_pass        = "";
+$db_database    = "db_antrian"; // Kunci utamanya di sini, arahkan ke db_antrian!
 
-// buat koneksi database
-$mysqli = mysqli_connect($host, $username, $password, $database);
+$mysqli = new mysqli($db_host, $db_user, $db_pass, $db_database);
 
-// cek koneksi
-// jika koneksi gagal 
-if (!$mysqli) {
-    // tampilkan pesan gagal koneksi
-    die('Koneksi Database Gagal : ' . mysqli_connect_error());
+if ($mysqli->connect_error) {
+    die('Koneksi Database Gagal : ' . $mysqli->connect_error);
 }
+
+// Variabel cadangan agar aman dibaca oleh file lainnya
+$conn = $mysqli;
+$koneksi = $mysqli;
+$db = $mysqli;
