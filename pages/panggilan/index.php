@@ -206,7 +206,7 @@ $loket_aktif = isset($_GET['loket']) ? mysqli_real_escape_string($mysqli, $_GET[
                                 var driverName = val.nama_driver ? val.nama_driver : '-';
                                 var platNo = (val.plat_nomor && val.plat_nomor !== 'undefined') ? val.plat_nomor : '-';
 
-                                // --- PENGUNCIAN WAKTU INDIVIDUAL TERJAMIN ---
+                                // --- LOGIKA HITUNG MUNDUR INDIVIDUAL (MAX 60 MENIT) ---
                                 var idAntrian = val.id;
                                 var timestampMasuk = 0;
 
@@ -225,6 +225,9 @@ $loket_aktif = isset($_GET['loket']) ? mysqli_real_escape_string($mysqli, $_GET[
 
                                 var totalBatasDetik = 3600; // 60 Menit
                                 var sisaDetik = totalBatasDetik - selisihDetik;
+                                
+                                if (sisaDetik > totalBatasDetik) sisaDetik = totalBatasDetik;
+
                                 var isExpired = sisaDetik <= 0;
 
                                 var durasiTeks = "";

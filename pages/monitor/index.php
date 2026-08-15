@@ -197,6 +197,8 @@ elseif ($loket_aktif == '15') $nama_loket_teks = "SUPPLIER";
 
                                 var totalBatasDetik = 3600;
                                 var sisaDetik = totalBatasDetik - selisihDetik;
+                                if (sisaDetik > totalBatasDetik) sisaDetik = totalBatasDetik;
+
                                 var isExpired = sisaDetik <= 0;
 
                                 var durasiTeks = "";
@@ -295,6 +297,7 @@ elseif ($loket_aktif == '15') $nama_loket_teks = "SUPPLIER";
                             var noAntrianRaw = item.antrian;
                             var noAngka = noAntrianRaw.replace(/[^0-9]/g, '');
                             
+                            // FORMAT PANGGILAN BARU
                             var teksPanggilan = "Nomor Antrian " + noAngka + " Silahkan Menuju Loket";
 
                             isSpeaking = true;
