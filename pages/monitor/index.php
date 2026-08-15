@@ -4,101 +4,128 @@ require_once "../../config/database.php";
 date_default_timezone_set("Asia/Jakarta");
 $tanggal = date("Y-m-d");
 
-// Ambil data pengaturan layout antrian dari database
-$query_setting = mysqli_query($mysqli, "SELECT * FROM queue_setting ORDER BY id DESC LIMIT 1") or die(mysqli_error($mysqli));
-$data_setting = mysqli_fetch_assoc($query_setting) ?: [];
+// Array Konversi Nama Hari ke Bahasa Indonesia
+$nama_hari_array = array(
+    'Sunday'    => 'Minggu',
+    'Monday'    => 'Senin',
+    'Tuesday'   => 'Selasa',
+    'Wednesday' => 'Rabu',
+    'Thursday'  => 'Kamis',
+    'Friday'    => 'Jumat',
+    'Saturday'  => 'Sabtu'
+);
+$hari_ini = $nama_hari_array[date('l')];
 
-// Tangkap parameter ID loket dari URL (Contoh: ?loket=11)
 $loket_aktif = isset($_GET['loket']) ? mysqli_real_escape_string($mysqli, $_GET['loket']) : '';
 
-// Tentukan Nama Display Monitor berdasarkan ID Angka agar judul di TV rapi
-$nama_loket_tampil = "GLOBAL MONITOR";
-if ($loket_aktif == '11') $nama_loket_tampil = "HT & ISONITE";
-elseif ($loket_aktif == '12') $nama_loket_tampil = "PHOSPHATE COATING";
-elseif ($loket_aktif == '13') $nama_loket_tampil = "RAW MATERIAL";
-elseif ($loket_aktif == '14') $nama_loket_tampil = "AUDIT / MEETING";
-elseif ($loket_aktif == '15') $nama_loket_tampil = "SUPPLIER";
+$nama_loket_teks = "SEMUA LOKET";
+if ($loket_aktif == '11') $nama_loket_teks = "HT & ISONITE";
+elseif ($loket_aktif == '12') $nama_loket_teks = "PHOSPHATE COATING";
+elseif ($loket_aktif == '13') $nama_loket_teks = "RAW MATERIAL";
+elseif ($loket_aktif == '14') $nama_loket_teks = "AUDIT / MEETING";
+elseif ($loket_aktif == '15') $nama_loket_teks = "SUPPLIER";
 ?>
-<!DOCTYPE html>
-<html lang="en" class="h-100">
+<!doctype html>
+<html lang="id" class="h-100">
 
 <head>
-    <meta charset="UTF-8">
-    <meta http-equiv="X-UA-Compatible" content="IE=edge">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Layar Monitor Antrian TV - <?= htmlspecialchars($nama_loket_tampil); ?></title>
-    
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Layar Monitor Antrian TV - <?php echo $nama_loket_teks; ?></title>
+
     <link href="../../assets/img/LOGO%20PMTI.jpg" type="image/jpeg" rel="icon">
     <link href="../../assets/vendor/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
-    <link href="../../assets/vendor/css/swap.css" rel="stylesheet">
-    <link rel="stylesheet" href="../../assets/css/style.css">
-    
+    <link href="../../assets/css/style.css" rel="stylesheet">
+
     <style>
-        body { overflow: hidden; }
-        main { height: calc(100vh - 140px); position: relative; z-index: 0; }
-        .table-samsat th { background-color: #198754 !important; color: #fff !important; font-weight: bold; text-transform: uppercase; font-size: 1.2rem; padding: 15px; }
-        .table-samsat td { font-size: 1.3rem; font-weight: bold; padding: 15px; vertical-align: middle; }
-        .table-samsat tbody tr { background-color: #ffffff !important; color: #212529 !important; border-bottom: 2px solid #dee2e6 !important; }
-        .monitor-sidebar { display: flex; flex-direction: column; gap: 15px; }
+        body {
+            background-color: #0d1b2a;
+            color: #ffffff;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            overflow-x: hidden;
+        }
+        .header-monitor {
+            background: linear-gradient(90deg, #1b263b 0%, #0d1b2a 100%);
+            border-bottom: 3px solid #00b4d8;
+        }
+        .table-custom {
+            font-size: 1.35rem;
+            background-color: #ffffff;
+            color: #000000;
+            border-radius: 12px;
+            overflow: hidden;
+        }
+        .table-custom th {
+            background-color: #198754 !important;
+            color: #ffffff !important;
+            text-align: center !important;
+            vertical-align: middle !important;
+            padding: 18px 15px;
+            font-size: 1.4rem;
+        }
+        .table-custom td {
+            vertical-align: middle !important;
+            padding: 18px 15px;
+            text-align: center !important;
+        }
+        .bg-expired {
+            background-color: #f8d7da !important;
+            color: #842029 !important;
+            font-weight: bold;
+        }
+        .running-text {
+            background-color: #000814;
+            color: #ffb703;
+            font-size: 1.2rem;
+            font-weight: bold;
+            padding: 10px 0;
+            border-top: 2px solid #00b4d8;
+        }
     </style>
 </head>
 
-<body class="d-flex flex-column h-100" style="background-color:<?= $data_setting['warna_background'] ?? '#2B303A' ?>;">
-    
-    <header style="background-color:<?= $data_setting['warna_primary'] ?? '#198754' ?>;" class="d-flex justify-content-between align-items-center py-3 px-5 border-bottom">
-        <span style="color:<?= $data_setting['warna_text'] ?? '#fff' ?>;" class="fs-3 fw-bold">
-            INFORMASI ANTRIAN DELIVERY - <?= htmlspecialchars($nama_loket_tampil); ?>
-        </span>
-        <div class="d-flex align-items-center fs-4" style="color:<?= $data_setting['warna_text'] ?? '#fff' ?>;">
-            <div class="me-5"><i class="bi bi-calendar3 me-2"></i><span id="date"><?= date('d M Y'); ?></span></div>
-            <div><i class="bi bi-clock me-2"></i><span id="time">00:00:00 WIB</span></div>
+<body class="d-flex flex-column h-100">
+
+    <!-- HEADER MONITOR TV -->
+    <header class="header-monitor py-3 px-4 shadow-sm">
+        <div class="d-flex justify-content-between align-items-center">
+            <div class="d-flex align-items-center">
+                <i class="bi-tv-fill text-info fs-1 me-3"></i>
+                <div>
+                    <h2 class="fw-bold mb-0 text-white">INFORMASI ANTRIAN DELIVERY</h2>
+                    <h4 class="text-warning fw-bold mb-0"><?php echo $nama_loket_teks; ?></h4>
+                </div>
+            </div>
+            <div class="text-end">
+                <h4 class="fw-bold text-white mb-1" id="clock">00:00:00 WIB</h4>
+                <span class="badge bg-info text-dark fw-bold fs-6">
+                    <i class="bi-calendar-date me-1"></i> <?php echo $hari_ini . ', ' . date('d M Y'); ?>
+                </span>
+            </div>
         </div>
     </header>
 
-    <main class="px-5 my-3 flex-grow-1">
-        <div class="row h-100">
-            <div class="col-md-8 h-100 overflow-auto">
-                <div class="card shadow border-0 h-100">
-                    <div class="card-body p-0">
-                        <table class="table table-bordered text-center align-middle mb-0 table-samsat">
-                            <thead>
-                                <tr>
-                                    <th style="width: 15%;">No. Antrian</th>
-                                    <th style="width: 25%;">Nama Customer</th>
-                                    <th style="width: 25%;">Nama Driver</th>
-                                    <th style="width: 20%;">Plat No.</th>
-                                    <th style="width: 15%;">Status</th>
-                                </tr>
-                            </thead>
-                            <tbody id="tabelAntrianSamsat">
-                                <tr>
-                                    <td colspan="5" class="text-muted py-4 fw-bold">Memuat data antrian loket...</td>
-                                </tr>
-                            </tbody>
-                        </table>
-                    </div>
-                </div>
-            </div>
-
-            <div class="col-md-4 d-flex flex-column monitor-sidebar">
-                <div class="card text-center text-white bg-success shadow border-0 w-100 mb-2 py-2">
-                    <h5 class="fw-bold pt-2">NOMOR ANTRIAN DIPANGGIL</h5>
-                    <h1 id="antrian-sekarang" class="fw-bold display-1 py-3">-</h1>
-                    <h4 class="card-footer fw-bold py-2" style="margin: 0;"><?= htmlspecialchars($nama_loket_tampil); ?></h4>
-                </div>
-                
-                <div class="row g-2">
-                    <div class="col-6">
-                        <div class="card text-center text-white bg-warning shadow border-0 w-100 py-2">
-                            <h6 style="font-size: 0.9rem;" class="text-dark fw-bold">SELANJUTNYA</h6>
-                            <h3 id="antrian-selanjutnya" class="fw-bold my-1 text-dark">-</h3>
-                        </div>
-                    </div>
-                    <div class="col-6">
-                        <div class="card text-center text-white bg-primary shadow border-0 w-100 py-2">
-                            <h6 style="font-size: 0.9rem;" class="fw-bold">TOTAL ANTRIAN</h6>
-                            <h3 id="jumlah-antrian" class="fw-bold my-1">-</h3>
+    <!-- MAIN CONTENT TABLE -->
+    <main class="flex-grow-1 p-4">
+        <div class="container-fluid">
+            <div class="row">
+                <div class="col-12">
+                    <div class="card border-0 shadow-lg rounded-3 overflow-hidden">
+                        <div class="table-responsive">
+                            <table class="table table-striped table-hover align-middle mb-0 table-custom" id="tabelMonitor">
+                                <thead>
+                                    <tr>
+                                        <th width="15%">NO. ANTRIAN</th>
+                                        <th width="32%">NAMA CUSTOMER</th>
+                                        <th width="23%">NAMA DRIVER</th>
+                                        <th width="15%">COUNTDOWN</th>
+                                        <th width="15%">STATUS</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                </tbody>
+                            </table>
                         </div>
                     </div>
                 </div>
@@ -106,129 +133,188 @@ elseif ($loket_aktif == '15') $nama_loket_tampil = "SUPPLIER";
         </div>
     </main>
 
-    <footer class="overflow-hidden w-100 p-2 mt-auto" style="background-color: <?= $data_setting['warna_primary'] ?? '#198754' ?>; height: 50px;">
-        <marquee class="text-white mt-1" scrollamount="6">
-            <b><?= htmlspecialchars($data_setting['running_text'] ?? 'Selamat Datang di Layanan Sistem Antrian Kendaraan Delivery PMTI'); ?></b>
+    <!-- RUNNING TEXT FOOTER -->
+    <footer class="mt-auto running-text">
+        <marquee behavior="scroll" direction="left" scrollamount="6">
+            <i class="bi-broadcast me-2"></i> MOHON BERSABAR MENUNGGU PANGGILAN ANTRIAN. TERIMAKASIH ATAS PERHATIAN DAN KERJASAMANYA YANG BAIK. 整理番号が呼ばれるまで、恐れ入りますがそのままお待ちください。
         </marquee>
     </footer>
 
-    <audio id="tingtung" src="../../assets/audio/tingtung.mp3"></audio>
+    <!-- SCRIPT ASSETS -->
+    <script src="../../assets/vendor/js/jquery-3.6.0.min.js"></script>
+    <script src="../../assets/vendor/js/bootstrap.min.js"></script>
 
-    <script src="../../assets/vendor/js/jquery-3.6.0.min.js" type="text/javascript"></script>
-    <script src="../../assets/vendor/js/bootstrap.min.js" type="text/javascript"></script>
-    <script src="../../assets/vendor/js/responsivevoice.js" type="text/javascript"></script>
+    <script type="text/javascript">
+        if (!window.antrianTimestamps) window.antrianTimestamps = {};
 
-    <script>
-    $(document).ready(function() {
-        var bell = document.getElementById('tingtung');
-        var queuePanggil = [];
-        var isPlay = false;
-        var loketAktif = "<?php echo $loket_aktif; ?>";
+        $(document).ready(function() {
+            var loket = "<?php echo $loket_aktif; ?>";
+            var isSpeaking = false;
 
-        // Memicu izin audio browser agar fitur suara tidak diblokir otomatis
-        $(document).on('click', function() {
-            if (typeof responsiveVoice !== 'undefined') {
-                responsiveVoice.speak("", "Indonesian Female", { volume: 0 });
-            }
-        });
+            // Jam Digital Realtime
+            setInterval(function() {
+                var d = new Date();
+                var timeStr = d.toLocaleTimeString('id-ID') + ' WIB';
+                $('#clock').text(timeStr);
+            }, 1000);
 
-        // Fungsi mengambil baris tabel HTML dari get_table.php
-        const get_tabel_samsat = () => {
-            $.ajax({
-                url: 'get_table.php',
-                method: 'GET',
-                data: { loket: loketAktif, v: Math.random() },
-                success: function(htmlData) {
-                    $('#tabelAntrianSamsat').html(htmlData);
-                },
-                error: function(xhr, status, error) {
-                    console.error("Gagal memuat get_table.php:", error);
+            // Cek Izin Suara Autoplay Browser
+            $(document).on('click keydown', function() {
+                if ('speechSynthesis' in window) {
+                    window.speechSynthesis.resume();
                 }
             });
-        }
 
-        // Fungsi mendeteksi instruksi panggilan suara baru dari petugas loket
-        const get_panggilan = () => {
-            $.ajax({
-                url: 'get_panggilan.php',
-                method: 'POST',
-                data: { loket: loketAktif },
-                dataType: 'json',
-                success: function(result) {
-                    if (result.success && Array.isArray(result.data)) {
-                        result.data.forEach(function(el) {
-                            if (!queuePanggil.some(item => item.id === el.id)) {
-                                queuePanggil.push(el);
-                                if (!isPlay) panggilAntrian();
-                            }
-                        });
+            // Load Tabel Monitor
+            function fetchMonitorData() {
+                $.ajax({
+                    type: 'GET',
+                    url: '../panggilan/get_antrian.php',
+                    data: { loket: loket, v: Math.random() },
+                    dataType: 'json',
+                    success: function(response) {
+                        var html = '';
+                        if (response.data && response.data.length > 0 && response.data[0].no_antrian !== '-') {
+                            $.each(response.data, function(i, val) {
+                                var custName = val.nama_customer ? val.nama_customer : '-';
+                                var driverName = val.nama_driver ? val.nama_driver : '-';
+
+                                var idAntrian = val.id;
+                                var timestampMasuk = 0;
+
+                                if (val.timestamp && val.timestamp > 0) {
+                                    timestampMasuk = val.timestamp * 1000;
+                                } else {
+                                    if (!window.antrianTimestamps[idAntrian]) {
+                                        window.antrianTimestamps[idAntrian] = new Date().getTime();
+                                    }
+                                    timestampMasuk = window.antrianTimestamps[idAntrian];
+                                }
+
+                                var waktuSekarang = new Date().getTime();
+                                var selisihDetik = Math.floor((waktuSekarang - timestampMasuk) / 1000);
+                                if (selisihDetik < 0) selisihDetik = 0;
+
+                                var totalBatasDetik = 3600;
+                                var sisaDetik = totalBatasDetik - selisihDetik;
+                                var isExpired = sisaDetik <= 0;
+
+                                var durasiTeks = "";
+                                if (isExpired) {
+                                    durasiTeks = "00:00";
+                                } else {
+                                    var menit = Math.floor(sisaDetik / 60);
+                                    var detik = sisaDetik % 60;
+                                    var strMenit = menit < 10 ? "0" + menit : menit;
+                                    var strDetik = detik < 10 ? "0" + detik : detik;
+                                    durasiTeks = strMenit + ":" + strDetik;
+                                }
+
+                                var rowClass = isExpired ? 'bg-expired' : '';
+                                var badgeStatus = val.status === '1' 
+                                    ? '<span class="badge bg-success fs-5 px-3 py-2"><i class="bi-megaphone-fill me-1"></i> DIPANGGIL</span>' 
+                                    : '<span class="badge bg-secondary fs-5 px-3 py-2">MENUNGGU</span>';
+
+                                html += '<tr class="' + rowClass + '">';
+                                html += '<td class="fw-bold fs-2 text-primary text-center">' + val.no_antrian + '</td>';
+                                html += '<td class="fw-bold text-center fs-4">' + custName + '</td>';
+                                html += '<td class="text-center fs-4">' + driverName + '</td>';
+                                
+                                if(isExpired) {
+                                    html += '<td class="text-center"><span class="badge bg-danger fs-5 px-3 py-2"><i class="bi-exclamation-triangle-fill me-1"></i> ' + durasiTeks + '</span></td>';
+                                } else {
+                                    html += '<td class="text-center"><span class="badge bg-dark fs-5 px-3 py-2"><i class="bi-hourglass-split me-1"></i> ' + durasiTeks + '</span></td>';
+                                }
+
+                                html += '<td class="text-center">' + badgeStatus + '</td>';
+                                html += '</tr>';
+                            });
+                        } else {
+                            html = '<tr><td colspan="5" class="text-center text-muted py-5 font-monospace fs-4">Belum Ada Antrian Yang Terdaftar Hari Ini</td></tr>';
+                        }
+                        $('#tabelMonitor tbody').html(html);
+                    }
+                });
+            }
+
+            // Fungsi Menghapus Antrian Panggilan
+            function hapusQueuePanggilan(itemId) {
+                $.ajax({
+                    type: 'POST',
+                    url: 'delete_panggilan.php',
+                    data: { id: itemId },
+                    complete: function() {
+                        isSpeaking = false;
+                        fetchMonitorData();
+                    }
+                });
+            }
+
+            // Fungsi Panggilan Suara Menggunakan Native Browser Web Speech API
+            function bunyikanPanggilan(teks, itemId) {
+                if (!('speechSynthesis' in window)) {
+                    hapusQueuePanggilan(itemId);
+                    return;
+                }
+
+                window.speechSynthesis.cancel();
+
+                var utterance = new SpeechSynthesisUtterance(teks);
+                utterance.lang = 'id-ID';
+                utterance.rate = 0.85;
+                utterance.pitch = 1.0;
+
+                var isFinished = false;
+                function selesai() {
+                    if (!isFinished) {
+                        isFinished = true;
+                        hapusQueuePanggilan(itemId);
                     }
                 }
-            });
-        }
 
-        // Jalankan pemuatan data awal
-        $('#jumlah-antrian').load('../panggilan/get_jumlah_antrian.php?loket=' + encodeURIComponent(loketAktif));
-        $('#antrian-sekarang').load('../panggilan/get_antrian_sekarang.php?loket=' + encodeURIComponent(loketAktif));
-        $('#antrian-selanjutnya').load('../panggilan/get_antrian_selanjutnya.php?loket=' + encodeURIComponent(loketAktif));
-        get_tabel_samsat();
-        get_panggilan();
+                utterance.onend = selesai;
+                utterance.onerror = selesai;
 
-        // Refresh realtime berkala setiap 1.5 detik
-        setInterval(function() {
-            $('#jumlah-antrian').load('../panggilan/get_jumlah_antrian.php?loket=' + encodeURIComponent(loketAktif));
-            $('#antrian-sekarang').load('../panggilan/get_antrian_sekarang.php?loket=' + encodeURIComponent(loketAktif));
-            $('#antrian-selanjutnya').load('../panggilan/get_antrian_selanjutnya.php?loket=' + encodeURIComponent(loketAktif));
-            get_tabel_samsat();
-            get_panggilan();
-        }, 1500);
+                setTimeout(selesai, 6000);
 
-        // Pengolahan Mesin Suara Panggilan (ResponsiveVoice)
-        function panggilAntrian() {
-            if (queuePanggil.length > 0) {
-                let val = queuePanggil[0];
-                if (!isPlay) {
-                    isPlay = true;
-                    let formatted = String(val.antrian).padStart(3, '0');
-                    $("#antrian-sekarang").html(formatted).fadeOut(200).fadeIn(200);
-                    
-                    // KONVERSI SUARA: Mengubah sebutan internal ID (11-15) menjadi suara Loket (1-5)
-                    var nomorLoketSuara = "";
-                    if (val.loket == "11") nomorLoketSuara = "1";
-                    else if (val.loket == "12") nomorLoketSuara = "2";
-                    else if (val.loket == "13") nomorLoketSuara = "3";
-                    else if (val.loket == "14") nomorLoketSuara = "4";
-                    else if (val.loket == "15") nomorLoketSuara = "5";
-                    else nomorLoketSuara = val.loket;
-
-                    bell.currentTime = 0;
-                    bell.play().then(_ => {
-                        setTimeout(function() {
-                            let spelled = formatted.split('').map(d => d === '0' ? 'kosong' : d).join(' ');
-                            responsiveVoice.speak("Nomor Antrian, " + spelled + ", menuju loket " + nomorLoketSuara, "Indonesian Female", {
-                                rate: 0.85, 
-                                pitch: 1,
-                                volume: 1,
-                                onend: () => {
-                                    $.ajax({ url: 'delete_panggilan.php', method: 'POST', data: { id: val.id } });
-                                    queuePanggil.shift();
-                                    isPlay = false;
-                                    if (queuePanggil.length > 0) panggilAntrian();
-                                }
-                            });
-                        }, 2000);
-                    }).catch(() => { isPlay = false; queuePanggil.shift(); });
-                }
+                window.speechSynthesis.speak(utterance);
             }
-        }
-    });
 
-    // Menjalankan Jam Digital Realtime di Pojok Kanan Atas Header
-    setInterval(function jam() {
-        var d = new Date();
-        var h = String(d.getHours()).padStart(2,'0'), m = String(d.getMinutes()).padStart(2,'0'), s = String(d.getSeconds()).padStart(2,'0');
-        document.getElementById("time").innerHTML = h + ":" + m + ":" + s + " WIB";
-    }, 1000);
+            // Pengecekan Trigger Panggilan
+            function checkVoiceQueue() {
+                if (isSpeaking) return;
+
+                $.ajax({
+                    type: 'POST',
+                    url: 'get_panggilan.php',
+                    data: { loket: loket },
+                    dataType: 'json',
+                    success: function(response) {
+                        if (response.success && response.data && response.data.length > 0) {
+                            var item = response.data[0];
+                            var noAntrianRaw = item.antrian;
+                            var noAngka = noAntrianRaw.replace(/[^0-9]/g, '');
+                            
+                            var teksPanggilan = "Nomor Antrian " + noAngka + " Silahkan Menuju Loket";
+
+                            isSpeaking = true;
+                            bunyikanPanggilan(teksPanggilan, item.id);
+                        }
+                    }
+                });
+            }
+
+            fetchMonitorData();
+            checkVoiceQueue();
+
+            setInterval(function() {
+                checkVoiceQueue();
+            }, 500);
+
+            setInterval(function() {
+                fetchMonitorData();
+            }, 1000);
+        });
     </script>
 </body>
 </html>

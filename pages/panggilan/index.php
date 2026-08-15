@@ -1,11 +1,9 @@
 <?php
-// Pastikan koneksi database tersedia di awal halaman panggilan
 require_once "../../config/database.php";
 
 date_default_timezone_set("Asia/Jakarta");
 $tanggal = date("Y-m-d");
 
-// Mengambil parameter loket yang aktif dibuka oleh petugas
 $loket_aktif = isset($_GET['loket']) ? mysqli_real_escape_string($mysqli, $_GET['loket']) : '';
 ?>
 <!doctype html>
@@ -136,7 +134,8 @@ $loket_aktif = isset($_GET['loket']) ? mysqli_real_escape_string($mysqli, $_GET[
                                         <th>Nama Customer</th>
                                         <th>Nama Driver</th>
                                         <th>Plat Nomor</th>
-                                        <th width="20%" class="text-center">Aksi Panggilan</th>
+                                        <th>COUNTDOWN</th>
+                                        <th width="22%" class="text-center">Aksi Panggilan</th>
                                     </tr>
                                 </thead>
                                 <tbody>
@@ -161,7 +160,7 @@ $loket_aktif = isset($_GET['loket']) ? mysqli_real_escape_string($mysqli, $_GET[
                     <div class="d-grid gap-2">
                         <a href="../monitor/index.php?loket=11" target="_blank" class="btn btn-outline-success text-start fw-bold py-3 px-4 shadow-sm rounded-3"><i class="bi-cpu me-3 fs-5"></i> Monitor: HT & ISONITE</a>
                         <a href="../monitor/index.php?loket=12" target="_blank" class="btn btn-outline-success text-start fw-bold py-3 px-4 shadow-sm rounded-3"><i class="bi-layers me-3 fs-5"></i> Monitor: PHOSPHATE COATING</a>
-                        <a href="../monitor/index.php?loket=13" target="_blank" class="btn btn-outline-success text-start fw-bold py-3 px-4 shadow-sm rounded-3"><i class="bi-box-seam me-3 fs-5"></i> Monitor: RAW MATERIAL</a>
+                        <a href="../monitor/index.php?loket=13" target="_blank" class="btn btn-outline-success text-start px-4 shadow-sm rounded-3"><i class="bi-box-seam me-3 fs-5"></i> Monitor: RAW MATERIAL</a>
                         <a href="../monitor/index.php?loket=14" target="_blank" class="btn btn-outline-success text-start fw-bold py-3 px-4 shadow-sm rounded-3"><i class="bi-person-workspace me-3 fs-5"></i> Monitor: AUDIT / MEETING</a>
                         <a href="../monitor/index.php?loket=15" target="_blank" class="btn btn-outline-success text-start fw-bold py-3 px-4 shadow-sm rounded-3"><i class="bi-truck me-3 fs-5"></i> Monitor: SUPPLIER</a>
                     </div>
@@ -181,6 +180,8 @@ $loket_aktif = isset($_GET['loket']) ? mysqli_real_escape_string($mysqli, $_GET[
 
     <?php if (!empty($loket_aktif)): ?>
     <script type="text/javascript">
+        if (!window.antrianTimestamps) window.antrianTimestamps = {};
+
         $(document).ready(function() {
             var loket = "<?php echo $loket_aktif; ?>";
 
@@ -203,40 +204,78 @@ $loket_aktif = isset($_GET['loket']) ? mysqli_real_escape_string($mysqli, $_GET[
                             $.each(response.data, function(i, val) {
                                 var custName = val.nama_customer ? val.nama_customer : '-';
                                 var driverName = val.nama_driver ? val.nama_driver : '-';
+                                var platNo = (val.plat_nomor && val.plat_nomor !== 'undefined') ? val.plat_nomor : '-';
 
-                                html += '<tr>';
+                                // --- PENGUNCIAN WAKTU INDIVIDUAL TERJAMIN ---
+                                var idAntrian = val.id;
+                                var timestampMasuk = 0;
+
+                                if (val.timestamp && val.timestamp > 0) {
+                                    timestampMasuk = val.timestamp * 1000;
+                                } else {
+                                    if (!window.antrianTimestamps[idAntrian]) {
+                                        window.antrianTimestamps[idAntrian] = new Date().getTime();
+                                    }
+                                    timestampMasuk = window.antrianTimestamps[idAntrian];
+                                }
+
+                                var waktuSekarang = new Date().getTime();
+                                var selisihDetik = Math.floor((waktuSekarang - timestampMasuk) / 1000);
+                                if (selisihDetik < 0) selisihDetik = 0;
+
+                                var totalBatasDetik = 3600; // 60 Menit
+                                var sisaDetik = totalBatasDetik - selisihDetik;
+                                var isExpired = sisaDetik <= 0;
+
+                                var durasiTeks = "";
+                                if (isExpired) {
+                                    durasiTeks = "00:00 - SEGERA DILAYANI!";
+                                } else {
+                                    var menit = Math.floor(sisaDetik / 60);
+                                    var detik = sisaDetik % 60;
+                                    var strMenit = menit < 10 ? "0" + menit : menit;
+                                    var strDetik = detik < 10 ? "0" + detik : detik;
+                                    durasiTeks = strMenit + ":" + strDetik;
+                                }
+
+                                var rowClass = isExpired ? 'table-danger text-danger fw-bold border-danger' : '';
+
+                                html += '<tr class="' + rowClass + '">';
                                 html += '<td class="fw-bold fs-5 text-success">' + val.no_antrian + '</td>';
-                                html += '<td class="fw-bold text-dark">' + custName + '</td>'; 
+                                html += '<td class="fw-bold">' + custName + '</td>'; 
                                 html += '<td>' + driverName + '</td>';
-                                html += '<td class="fw-bold text-uppercase">' + val.plat_nomor + '</td>';
+                                html += '<td class="fw-bold text-uppercase">' + platNo + '</td>';
                                 
-                                // LOGIKA PANGGIL DAN PANGGIL ULANG
+                                if(isExpired) {
+                                    html += '<td><span class="badge bg-danger text-white p-2 fs-6"><i class="bi-exclamation-triangle-fill me-1"></i> ' + durasiTeks + '</span></td>';
+                                } else {
+                                    html += '<td><span class="badge bg-secondary text-white p-2 fs-6"><i class="bi-hourglass-split me-1"></i> ' + durasiTeks + '</span></td>';
+                                }
+                                
+                                html += '<td class="text-center">';
                                 if(val.status === '0') {
-                                    // Belum dipanggil sama sekali
-                                    html += '<td class="text-center">';
                                     html += '<button class="btn btn-success btn-sm btn-panggil px-3 fw-bold rounded-pill shadow-sm" data-id="'+val.id+'" data-no="'+val.no_antrian+'">';
                                     html += '<i class="bi-megaphone me-1"></i> Panggil';
                                     html += '</button>';
-                                    html += '</td>';
-                                } else {
-                                    // Sudah dipanggil -> Menampilkan Tombol Panggil Ulang (Warna Kuning)
-                                    html += '<td class="text-center">';
-                                    html += '<button class="btn btn-warning btn-sm btn-panggil-ulang px-3 fw-bold rounded-pill text-dark shadow-sm me-1" data-id="'+val.id+'" data-no="'+val.no_antrian+'" title="Putar ulang panggilan suara di TV">';
+                                } else if(val.status === '1') {
+                                    html += '<button class="btn btn-warning btn-sm btn-panggil-ulang px-3 fw-bold rounded-pill text-dark shadow-sm me-1" data-id="'+val.id+'" data-no="'+val.no_antrian+'" title="Panggil Ulang Suara di TV">';
                                     html += '<i class="bi-arrow-clockwise me-1"></i> Panggil Ulang';
                                     html += '</button>';
-                                    html += '</td>';
+                                    html += '<button class="btn btn-primary btn-sm btn-selesai px-3 fw-bold rounded-pill shadow-sm" data-id="'+val.id+'" title="Selesaikan Layanan Driver Ini">';
+                                    html += '<i class="bi-check-circle me-1"></i> Selesai';
+                                    html += '</button>';
                                 }
+                                html += '</td>';
                                 html += '</tr>';
                             });
                         } else {
-                            html = '<tr><td colspan="5" class="text-center text-muted py-4 font-monospace">Belum ada antrian yang terdaftar di loket ini hari ini.</td></tr>';
+                            html = '<tr><td colspan="6" class="text-center text-muted py-4 font-monospace">Belum ada antrian yang terdaftar di loket ini hari ini.</td></tr>';
                         }
                         $('#tabelAntrian tbody').html(html);
                     }
                 });
             }
 
-            // AKSI PANGGIL PERTAMA KALI
             $(document).on('click', '.btn-panggil', function() {
                 var id = $(this).data('id');
                 var no = $(this).data('no');
@@ -259,15 +298,27 @@ $loket_aktif = isset($_GET['loket']) ? mysqli_real_escape_string($mysqli, $_GET[
                 });
             });
 
-            // AKSI PANGGIL ULANG (RECALL)
             $(document).on('click', '.btn-panggil-ulang', function() {
                 var no = $(this).data('no');
                 
-                // Langsung mentrigger suara panggilan ke TV Monitor tanpa mengubah status lagi
                 $.ajax({
                     type: 'POST',
                     url: 'create_panggilan.php',
                     data: { antrian: no, loket: loket },
+                    success: function() {
+                        loadCounter();
+                        loadTabel();
+                    }
+                });
+            });
+
+            $(document).on('click', '.btn-selesai', function() {
+                var id = $(this).data('id');
+                
+                $.ajax({
+                    type: 'POST',
+                    url: 'update_selesai.php',
+                    data: { id: id },
                     success: function() {
                         loadCounter();
                         loadTabel();
@@ -280,7 +331,7 @@ $loket_aktif = isset($_GET['loket']) ? mysqli_real_escape_string($mysqli, $_GET[
             setInterval(function() {
                 loadCounter();
                 loadTabel();
-            }, 3000);
+            }, 1000);
         });
     </script>
     <?php endif; ?>
