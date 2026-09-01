@@ -157,14 +157,12 @@ elseif ($loket_aktif == '15') $nama_loket_teks = "SUPPLIER";
             var voiceTimer = null;
             var audioReady = false;
 
-            // Jam Digital Realtime
             setInterval(function() {
                 var d = new Date();
                 var timeStr = d.toLocaleTimeString('id-ID') + ' WIB';
                 $('#clock').text(timeStr);
             }, 1000);
 
-            // Pengaktifan Audio Browser
             function activateAudio() {
                 if ('speechSynthesis' in window) {
                     window.speechSynthesis.cancel();
@@ -186,7 +184,6 @@ elseif ($loket_aktif == '15') $nama_loket_teks = "SUPPLIER";
                 }
             });
 
-            // Load Data Tabel Monitor
             function fetchMonitorData() {
                 $.ajax({
                     type: 'GET',
@@ -260,7 +257,6 @@ elseif ($loket_aktif == '15') $nama_loket_teks = "SUPPLIER";
                 });
             }
 
-            // Menghapus antrian yang sudah selesai diputar
             function hapusQueuePanggilan(itemId) {
                 if (voiceTimer) {
                     clearTimeout(voiceTimer);
@@ -279,7 +275,6 @@ elseif ($loket_aktif == '15') $nama_loket_teks = "SUPPLIER";
                 });
             }
 
-            // Pembacaan Suara Tanpa Simbol Tanda Baca yang Membuat Engine Web Speech Error
             function bunyikanPanggilan(teks, itemId) {
                 if (!('speechSynthesis' in window)) {
                     hapusQueuePanggilan(itemId);
@@ -307,7 +302,6 @@ elseif ($loket_aktif == '15') $nama_loket_teks = "SUPPLIER";
                 utterance.onend = selesai;
                 utterance.onerror = selesai;
 
-                // Watchdog Timer Maksimal 7 Detik
                 voiceTimer = setTimeout(function() {
                     selesai();
                 }, 7000);
@@ -315,7 +309,17 @@ elseif ($loket_aktif == '15') $nama_loket_teks = "SUPPLIER";
                 window.speechSynthesis.speak(utterance);
             }
 
-            // Pengecekan Antrian Panggilan
+            // Fungsi Penjernih Teks Audio (Mencegah Pengejaan Kata per Karakter)
+            function formatNamaAudio(teks) {
+                if (!teks) return "";
+                // Hapus tanda titik pada PT/CV agar tidak dibaca sebagai singkatan kaku
+                var hasil = teks.replace(/^PT\.?\s+/i, 'Pt ');
+                hasil = hasil.replace(/^CV\.?\s+/i, 'Cv ');
+                
+                // Ubah UPPERCASE jadi Title Case agar browser membaca kata secara mulus
+                return hasil.toLowerCase().replace(/(?:^|\s)\S/g, function(a) { return a.toUpperCase(); });
+            }
+
             function checkVoiceQueue() {
                 if (isSpeaking) return;
 
@@ -329,12 +333,13 @@ elseif ($loket_aktif == '15') $nama_loket_teks = "SUPPLIER";
                             var item = response.data[0];
                             var noAntrianRaw = item.antrian;
                             var noAngka = parseInt(noAntrianRaw, 10);
-                            var driverName = item.nama_driver ? item.nama_driver.trim() : '';
+                            var rawCustomer = item.nama_driver ? item.nama_driver.trim() : ''; 
                             
-                            // Kalimat bersih tanpa tanda baca berlebihan yang rentan membuat Chrome mute
+                            var customerName = formatNamaAudio(rawCustomer);
+
                             var teksPanggilan = "";
-                            if (driverName !== '' && driverName !== '-') {
-                                teksPanggilan = "Nomor Antrian " + noAngka + " atas nama driver " + driverName + " silahkan menuju loket";
+                            if (customerName !== '' && customerName !== '-') {
+                                teksPanggilan = "Nomor Antrian " + noAngka + " " + customerName + " silahkan menuju loket";
                             } else {
                                 teksPanggilan = "Nomor Antrian " + noAngka + " silahkan menuju loket";
                             }

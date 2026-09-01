@@ -265,11 +265,11 @@ $loket_aktif = isset($_GET['loket']) ? mysqli_real_escape_string($mysqli, $_GET[
                                 
                                 html += '<td class="text-center">';
                                 if(val.status === '0') {
-                                    html += '<button class="btn btn-success btn-sm btn-panggil px-3 fw-bold rounded-pill shadow-sm" data-id="'+val.id+'" data-no="'+val.no_antrian+'" data-driver="'+driverName+'">';
+                                    html += '<button class="btn btn-success btn-sm btn-panggil px-3 fw-bold rounded-pill shadow-sm" data-id="'+val.id+'" data-no="'+val.no_antrian+'" data-customer="'+custName+'" data-driver="'+driverName+'">';
                                     html += '<i class="bi-megaphone me-1"></i> Panggil';
                                     html += '</button>';
                                 } else if(val.status === '1') {
-                                    html += '<button class="btn btn-warning btn-sm btn-panggil-ulang px-3 fw-bold rounded-pill text-dark shadow-sm me-1" data-id="'+val.id+'" data-no="'+val.no_antrian+'" data-driver="'+driverName+'" title="Panggil Ulang Suara di TV">';
+                                    html += '<button class="btn btn-warning btn-sm btn-panggil-ulang px-3 fw-bold rounded-pill text-dark shadow-sm me-1" data-id="'+val.id+'" data-no="'+val.no_antrian+'" data-customer="'+custName+'" data-driver="'+driverName+'" title="Panggil Ulang Suara di TV">';
                                     html += '<i class="bi-arrow-clockwise me-1"></i> Panggil Ulang';
                                     html += '</button>';
                                     html += '<button class="btn btn-primary btn-sm btn-selesai px-3 fw-bold rounded-pill shadow-sm" data-id="'+val.id+'" title="Selesaikan Layanan Driver Ini">';
@@ -298,16 +298,17 @@ $loket_aktif = isset($_GET['loket']) ? mysqli_real_escape_string($mysqli, $_GET[
                 });
             });
 
-            // Tombol Panggil
+            // Tombol Panggil (Kirim data nama_customer)
             $(document).on('click', '.btn-panggil', function() {
-                var id     = $(this).data('id');
-                var no     = $(this).data('no');
-                var driver = $(this).data('driver');
+                var id       = $(this).data('id');
+                var no       = $(this).data('no');
+                var customer = $(this).data('customer');
+                var driver   = $(this).data('driver');
                 
                 $.ajax({
                     type: 'POST',
                     url: 'create_panggilan.php',
-                    data: { antrian: no, loket: loket, nama_driver: driver },
+                    data: { antrian: no, loket: loket, nama_customer: customer, nama_driver: driver },
                     dataType: 'json'
                 });
 
@@ -322,15 +323,16 @@ $loket_aktif = isset($_GET['loket']) ? mysqli_real_escape_string($mysqli, $_GET[
                 });
             });
 
-            // Tombol Panggil Ulang
+            // Tombol Panggil Ulang (Kirim data nama_customer)
             $(document).on('click', '.btn-panggil-ulang', function() {
-                var no     = $(this).data('no');
-                var driver = $(this).data('driver');
+                var no       = $(this).data('no');
+                var customer = $(this).data('customer');
+                var driver   = $(this).data('driver');
                 
                 $.ajax({
                     type: 'POST',
                     url: 'create_panggilan.php',
-                    data: { antrian: no, loket: loket, nama_driver: driver },
+                    data: { antrian: no, loket: loket, nama_customer: customer, nama_driver: driver },
                     dataType: 'json',
                     complete: function() {
                         loadCounter();
