@@ -1,16 +1,31 @@
 <?php
-if (isset($_POST['id'])) {
-    require_once "../../config/database.php";
+require_once "../../config/database.php";
 
-    $id = mysqli_real_escape_string($mysqli, $_POST['id']);
+date_default_timezone_set("Asia/Jakarta");
+$tanggal = date("Y-m-d");
+$jam_sekarang = date("H:i:s");
 
-    // Mengubah status antrian menjadi 2 (Selesai Dilayani)
-    $query = mysqli_query($mysqli, "UPDATE queue_antrian_admisi SET status = '2' WHERE id = '$id'")
-             or die('Ada kesalahan query update selesai: ' . mysqli_error($mysqli));
+if ($_SERVER["REQUEST_METHOD"] == "POST") {
+    $id = isset($_POST['id']) ? mysqli_real_escape_string($mysqli, $_POST['id']) : '';
 
-    if ($query) {
-        header('Content-Type: application/json');
-        echo json_encode(array('status' => 'success'));
+    if (!empty($id)) {
+        // 1. Ambil data no_antrian
+        $q_admisi = mysqli_query($mysqli, "SELECT no_antrian FROM queue_antrian_admisi WHERE id = '$id' LIMIT 1");
+        $d_admisi = mysqli_fetch_assoc($q_admisi);
+
+        if ($d_admisi) {
+            $no_antrian = $d_admisi['no_antrian'];
+
+            // 2. Update status admisi menjadi selesai (status = 2)
+            mysqli_query($mysqli, "UPDATE queue_antrian_admisi SET status = '2', updated_date = NOW() WHERE id = '$id'");
+
+            // 3. Catat jam_selesai ke queue_antrian_history
+            mysqli_query($mysqli, "UPDATE queue_antrian_history 
+                                   SET jam_selesai = '$jam_sekarang' 
+                                   WHERE no_antrian = '$no_antrian' AND tanggal = '$tanggal'");
+        }
+
+        echo json_encode(array("success" => true));
     }
 }
 ?>

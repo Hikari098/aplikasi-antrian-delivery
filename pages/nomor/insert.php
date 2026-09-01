@@ -20,38 +20,37 @@ if (!$conn || $conn->connect_error) {
 }
 
 $nama_customer = isset($_POST['nama_customer']) ? mysqli_real_escape_string($conn, trim($_POST['nama_customer'])) : '';
-$nama_driver   = isset($_POST['nama_driver']) ? mysqli_real_escape_string($conn, trim($_POST['nama_driver'])) : '';
-$plat_nomor    = isset($_POST['plat_nomor']) ? mysqli_real_escape_string($conn, strtoupper(trim($_POST['plat_nomor']))) : '';
-$id_loket      = isset($_POST['id_loket']) ? mysqli_real_escape_string($conn, trim($_POST['id_loket'])) : ''; 
+$nama_driver   = isset($_POST['nama_driver'])   ? mysqli_real_escape_string($conn, trim($_POST['nama_driver'])) : '';
+$plat_nomor    = isset($_POST['plat_nomor'])    ? mysqli_real_escape_string($conn, strtoupper(trim($_POST['plat_nomor']))) : '';
+$id_loket      = isset($_POST['id_loket'])      ? mysqli_real_escape_string($conn, trim($_POST['id_loket'])) : ''; 
 
 date_default_timezone_set("Asia/Jakarta");
 $tanggal = date("Y-m-d");
+$jam_sekarang = date("H:i:s");
 
-// 1. Ambil nomor antrian terakhir yang terdaftar HARI INI berdasarkan id paling akhir
+// Reset harian admisi
+mysqli_query($conn, "DELETE FROM queue_antrian_admisi WHERE tanggal < '$tanggal'");
+
+// Hitung no antrian
 $query_no = mysqli_query($conn, "SELECT no_antrian FROM queue_antrian_admisi WHERE tanggal = '$tanggal' ORDER BY id DESC LIMIT 1");
 $data_no  = mysqli_fetch_assoc($query_no);
 
 if ($data_no) {
     $no_terakhir = (int)$data_no['no_antrian'];
-    
-    // Jika nomor antrian terakhir sudah 50 atau lebih, RESET KEMBALI KE 1
-    if ($no_terakhir >= 50) {
-        $no_antrian = 1;
-    } else {
-        $no_antrian = $no_terakhir + 1;
-    }
+    $no_antrian  = ($no_terakhir >= 50) ? 1 : ($no_terakhir + 1);
 } else {
     $no_antrian = 1;
 }
 
-// 2. Simpan data antrian baru ke tabel admisi
+// 1. Simpan ke admisi live
 $insert = mysqli_query($conn, "INSERT INTO queue_antrian_admisi(tanggal, no_antrian, status, nama_customer, nama_driver, plat_nomor) 
                                VALUES('$tanggal', '$no_antrian', '0', '$nama_customer', '$nama_driver', '$plat_nomor')");
           
 if ($insert) {
-    // 3. Catat riwayat ke queue_antrian_history dengan id_loket yang lengkap
-    mysqli_query($conn, "INSERT INTO queue_antrian_history(tanggal, no_antrian, nama_customer, nama_driver, plat_nomor, id_loket) 
-                         VALUES('$tanggal', '$no_antrian', '$nama_customer', '$nama_driver', '$plat_nomor', '$id_loket')");
+    // 2. Simpan/Update ke history dengan mencatat jam_input (ON DUPLICATE UPDATE agar tidak ada baris ganda)
+    mysqli_query($conn, "INSERT INTO queue_antrian_history(tanggal, jam_input, no_antrian, nama_customer, nama_driver, plat_nomor, id_loket) 
+                         VALUES('$tanggal', '$jam_sekarang', '$no_antrian', '$nama_customer', '$nama_driver', '$plat_nomor', '$id_loket')
+                         ON DUPLICATE KEY UPDATE jam_input='$jam_sekarang', nama_customer='$nama_customer', nama_driver='$nama_driver', plat_nomor='$plat_nomor', id_loket='$id_loket'");
     
     echo "Sukses";
 } else {

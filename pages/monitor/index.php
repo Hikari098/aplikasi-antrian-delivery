@@ -86,7 +86,6 @@ elseif ($loket_aktif == '15') $nama_loket_teks = "SUPPLIER";
 
 <body class="d-flex flex-column h-100">
 
-    <!-- HEADER MONITOR TV -->
     <header class="header-monitor py-3 px-4 shadow-sm">
         <div class="d-flex justify-content-between align-items-center">
             <div class="d-flex align-items-center">
@@ -110,7 +109,6 @@ elseif ($loket_aktif == '15') $nama_loket_teks = "SUPPLIER";
         </div>
     </header>
 
-    <!-- MAIN CONTENT TABLE -->
     <main class="flex-grow-1 p-4">
         <div class="container-fluid">
             <div class="row">
@@ -137,14 +135,12 @@ elseif ($loket_aktif == '15') $nama_loket_teks = "SUPPLIER";
         </div>
     </main>
 
-    <!-- RUNNING TEXT FOOTER -->
     <footer class="mt-auto running-text">
         <marquee behavior="scroll" direction="left" scrollamount="6">
             <i class="bi-broadcast me-2"></i> MOHON BERSABAR MENUNGGU PANGGILAN ANTRIAN. TERIMAKASIH ATAS PERHATIAN DAN KERJASAMANYA YANG BAIK. 整理番号が呼ばれるまで、恐れ入りますがそのままお待ちください。
         </marquee>
     </footer>
 
-    <!-- SCRIPT ASSETS -->
     <script src="../../assets/vendor/js/jquery-3.6.0.min.js"></script>
     <script src="../../assets/vendor/js/bootstrap.min.js"></script>
 
@@ -267,28 +263,28 @@ elseif ($loket_aktif == '15') $nama_loket_teks = "SUPPLIER";
                     url: 'delete_panggilan.php',
                     data: { id: itemId },
                     complete: function() {
-                        setTimeout(function() {
-                            isSpeaking = false;
-                            fetchMonitorData();
-                        }, 200);
+                        isSpeaking = false;
+                        fetchMonitorData();
                     }
                 });
             }
 
+            // ZERO-DELAY SPEECH ENGINE FIX
             function bunyikanPanggilan(teks, itemId) {
                 if (!('speechSynthesis' in window)) {
                     hapusQueuePanggilan(itemId);
                     return;
                 }
 
-                try {
-                    window.speechSynthesis.cancel();
+                // Forced Cancel Segera: Bersihkan antrean suara lama yang menggantung
+                window.speechSynthesis.cancel();
+                if (window.speechSynthesis.paused) {
                     window.speechSynthesis.resume();
-                } catch(e){}
+                }
 
                 var utterance = new SpeechSynthesisUtterance(teks);
                 utterance.lang = 'id-ID';
-                utterance.rate = 0.8;
+                utterance.rate = 0.9;
                 utterance.pitch = 1.0;
 
                 var isFinished = false;
@@ -304,20 +300,32 @@ elseif ($loket_aktif == '15') $nama_loket_teks = "SUPPLIER";
 
                 voiceTimer = setTimeout(function() {
                     selesai();
-                }, 7000);
+                }, 5000);
 
+                // Bunyikan langsung tanpa setTimeout bertingkat
                 window.speechSynthesis.speak(utterance);
             }
 
-            // Fungsi Penjernih Teks Audio (Mencegah Pengejaan Kata per Karakter)
             function formatNamaAudio(teks) {
                 if (!teks) return "";
-                // Hapus tanda titik pada PT/CV agar tidak dibaca sebagai singkatan kaku
-                var hasil = teks.replace(/^PT\.?\s+/i, 'Pt ');
-                hasil = hasil.replace(/^CV\.?\s+/i, 'Cv ');
-                
-                // Ubah UPPERCASE jadi Title Case agar browser membaca kata secara mulus
-                return hasil.toLowerCase().replace(/(?:^|\s)\S/g, function(a) { return a.toUpperCase(); });
+
+                var hasil = teks.trim();
+                hasil = hasil.replace(/^PT\.?\s+/i, 'Pe Te ');
+                hasil = hasil.replace(/^CV\.?\s+/i, 'Ce Ve ');
+
+                var words = hasil.split(/\s+/);
+                var formattedWords = [];
+
+                for (var i = 0; i < words.length; i++) {
+                    var w = words[i];
+                    if (w === 'Pe' || w === 'Te' || w === 'Ce' || w === 'Ve') {
+                        formattedWords.push(w);
+                    } else if (w.length > 0) {
+                        formattedWords.push(w.charAt(0).toUpperCase() + w.slice(1).toLowerCase());
+                    }
+                }
+
+                return formattedWords.join(' ');
             }
 
             function checkVoiceQueue() {
@@ -331,17 +339,16 @@ elseif ($loket_aktif == '15') $nama_loket_teks = "SUPPLIER";
                     success: function(response) {
                         if (response.success && response.data && response.data.length > 0) {
                             var item = response.data[0];
-                            var noAntrianRaw = item.antrian;
-                            var noAngka = parseInt(noAntrianRaw, 10);
                             var rawCustomer = item.nama_driver ? item.nama_driver.trim() : ''; 
-                            
                             var customerName = formatNamaAudio(rawCustomer);
 
                             var teksPanggilan = "";
                             if (customerName !== '' && customerName !== '-') {
-                                teksPanggilan = "Nomor Antrian " + noAngka + " " + customerName + " silahkan menuju loket";
+                                teksPanggilan = customerName + ", silahkan menuju loket";
                             } else {
-                                teksPanggilan = "Nomor Antrian " + noAngka + " silahkan menuju loket";
+                                var noAntrianRaw = item.antrian;
+                                var noAngka = parseInt(noAntrianRaw, 10);
+                                teksPanggilan = "Nomor Antrian " + noAngka + ", silahkan menuju loket";
                             }
 
                             isSpeaking = true;
@@ -356,7 +363,7 @@ elseif ($loket_aktif == '15') $nama_loket_teks = "SUPPLIER";
 
             setInterval(function() {
                 checkVoiceQueue();
-            }, 300);
+            }, 250);
 
             setInterval(function() {
                 fetchMonitorData();

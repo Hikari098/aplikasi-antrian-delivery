@@ -181,6 +181,7 @@ $loket_aktif = isset($_GET['loket']) ? mysqli_real_escape_string($mysqli, $_GET[
     <?php if (!empty($loket_aktif)): ?>
     <script type="text/javascript">
         if (!window.antrianTimestamps) window.antrianTimestamps = {};
+        var isSelectingDropdown = false;
 
         $(document).ready(function() {
             var loket = "<?php echo $loket_aktif; ?>";
@@ -193,12 +194,16 @@ $loket_aktif = isset($_GET['loket']) ? mysqli_real_escape_string($mysqli, $_GET[
             }
 
             function loadTabel() {
+                if (isSelectingDropdown) return;
+
                 $.ajax({
                     type: 'GET',
                     url: 'get_antrian.php',
                     data: { loket: loket, v: Math.random() },
                     dataType: 'json',
                     success: function(response) {
+                        if (isSelectingDropdown) return;
+
                         var html = '';
                         if (response.data && response.data.length > 0 && response.data[0].no_antrian !== '-') {
                             $.each(response.data, function(i, val) {
@@ -268,7 +273,8 @@ $loket_aktif = isset($_GET['loket']) ? mysqli_real_escape_string($mysqli, $_GET[
                                     html += '<button class="btn btn-success btn-sm btn-panggil px-3 fw-bold rounded-pill shadow-sm" data-id="'+val.id+'" data-no="'+val.no_antrian+'" data-customer="'+custName+'" data-driver="'+driverName+'">';
                                     html += '<i class="bi-megaphone me-1"></i> Panggil';
                                     html += '</button>';
-                                } else if(val.status === '1') {
+                                } else {
+                                    // PERBAIKAN: Tampilkan tombol Panggil Ulang & Selesai untuk semua status yang sudah pernah dipanggil (status 1, 2, dll)
                                     html += '<button class="btn btn-warning btn-sm btn-panggil-ulang px-3 fw-bold rounded-pill text-dark shadow-sm me-1" data-id="'+val.id+'" data-no="'+val.no_antrian+'" data-customer="'+custName+'" data-driver="'+driverName+'" title="Panggil Ulang Suara di TV">';
                                     html += '<i class="bi-arrow-clockwise me-1"></i> Panggil Ulang';
                                     html += '</button>';
@@ -287,18 +293,37 @@ $loket_aktif = isset($_GET['loket']) ? mysqli_real_escape_string($mysqli, $_GET[
                 });
             }
 
+            $(document).on('focus mousedown', '.select-keterangan', function() {
+                isSelectingDropdown = true;
+            });
+
             $(document).on('change', '.select-keterangan', function() {
-                var id = $(this).data('id');
-                var ket = $(this).val();
+                var $el = $(this);
+                var id = $el.data('id');
+                var ket = $el.val();
                 
                 $.ajax({
                     type: 'POST',
                     url: 'update_keterangan.php',
-                    data: { id: id, keterangan: ket }
+                    data: { id: id, keterangan: ket },
+                    success: function() {
+                        setTimeout(function() {
+                            isSelectingDropdown = false;
+                            loadTabel();
+                        }, 800);
+                    },
+                    error: function() {
+                        isSelectingDropdown = false;
+                    }
                 });
             });
 
-            // Tombol Panggil (Kirim data nama_customer)
+            $(document).on('blur', '.select-keterangan', function() {
+                setTimeout(function() {
+                    isSelectingDropdown = false;
+                }, 800);
+            });
+
             $(document).on('click', '.btn-panggil', function() {
                 var id       = $(this).data('id');
                 var no       = $(this).data('no');
@@ -323,7 +348,6 @@ $loket_aktif = isset($_GET['loket']) ? mysqli_real_escape_string($mysqli, $_GET[
                 });
             });
 
-            // Tombol Panggil Ulang (Kirim data nama_customer)
             $(document).on('click', '.btn-panggil-ulang', function() {
                 var no       = $(this).data('no');
                 var customer = $(this).data('customer');
@@ -341,7 +365,6 @@ $loket_aktif = isset($_GET['loket']) ? mysqli_real_escape_string($mysqli, $_GET[
                 });
             });
 
-            // Tombol Selesai
             $(document).on('click', '.btn-selesai', function() {
                 var id = $(this).data('id');
                 
