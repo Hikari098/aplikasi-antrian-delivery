@@ -4,7 +4,6 @@ require_once "../../config/database.php";
 date_default_timezone_set("Asia/Jakarta");
 $tanggal = date("Y-m-d");
 
-// Array Konversi Nama Hari ke Bahasa Indonesia
 $nama_hari_array = array(
     'Sunday'    => 'Minggu',
     'Monday'    => 'Senin',
@@ -97,11 +96,16 @@ elseif ($loket_aktif == '15') $nama_loket_teks = "SUPPLIER";
                     <h4 class="text-warning fw-bold mb-0"><?php echo $nama_loket_teks; ?></h4>
                 </div>
             </div>
-            <div class="text-end">
-                <h4 class="fw-bold text-white mb-1" id="clock">00:00:00 WIB</h4>
-                <span class="badge bg-info text-dark fw-bold fs-6">
-                    <i class="bi-calendar-date me-1"></i> <?php echo $hari_ini . ', ' . date('d M Y'); ?>
-                </span>
+            <div class="text-end d-flex align-items-center gap-3">
+                <button id="btnEnableAudio" class="btn btn-danger fw-bold rounded-pill px-3 shadow-sm">
+                    <i class="bi-volume-mute-fill me-1"></i> Click to Enable Audio
+                </button>
+                <div>
+                    <h4 class="fw-bold text-white mb-1" id="clock">00:00:00 WIB</h4>
+                    <span class="badge bg-info text-dark fw-bold fs-6">
+                        <i class="bi-calendar-date me-1"></i> <?php echo $hari_ini . ', ' . date('d M Y'); ?>
+                    </span>
+                </div>
             </div>
         </div>
     </header>
@@ -150,6 +154,8 @@ elseif ($loket_aktif == '15') $nama_loket_teks = "SUPPLIER";
         $(document).ready(function() {
             var loket = "<?php echo $loket_aktif; ?>";
             var isSpeaking = false;
+            var voiceTimer = null;
+            var audioReady = false;
 
             // Jam Digital Realtime
             setInterval(function() {
@@ -158,14 +164,29 @@ elseif ($loket_aktif == '15') $nama_loket_teks = "SUPPLIER";
                 $('#clock').text(timeStr);
             }, 1000);
 
-            // Cek Izin Suara Autoplay Browser
-            $(document).on('click keydown', function() {
+            // Pengaktifan Audio Browser
+            function activateAudio() {
                 if ('speechSynthesis' in window) {
+                    window.speechSynthesis.cancel();
                     window.speechSynthesis.resume();
+                    var testUtter = new SpeechSynthesisUtterance('');
+                    window.speechSynthesis.speak(testUtter);
+                }
+                audioReady = true;
+                $('#btnEnableAudio').removeClass('btn-danger').addClass('btn-success').html('<i class="bi-volume-up-fill me-1"></i> Audio Active');
+            }
+
+            $('#btnEnableAudio').on('click', function() {
+                activateAudio();
+            });
+
+            $(document).on('click keydown', function() {
+                if (!audioReady) {
+                    activateAudio();
                 }
             });
 
-            // Load Tabel Monitor
+            // Load Data Tabel Monitor
             function fetchMonitorData() {
                 $.ajax({
                     type: 'GET',
@@ -239,31 +260,40 @@ elseif ($loket_aktif == '15') $nama_loket_teks = "SUPPLIER";
                 });
             }
 
-            // Fungsi Menghapus Antrian Panggilan
+            // Menghapus antrian yang sudah selesai diputar
             function hapusQueuePanggilan(itemId) {
+                if (voiceTimer) {
+                    clearTimeout(voiceTimer);
+                    voiceTimer = null;
+                }
                 $.ajax({
                     type: 'POST',
                     url: 'delete_panggilan.php',
                     data: { id: itemId },
                     complete: function() {
-                        isSpeaking = false;
-                        fetchMonitorData();
+                        setTimeout(function() {
+                            isSpeaking = false;
+                            fetchMonitorData();
+                        }, 200);
                     }
                 });
             }
 
-            // Fungsi Panggilan Suara Menggunakan Native Browser Web Speech API
+            // Pembacaan Suara Tanpa Simbol Tanda Baca yang Membuat Engine Web Speech Error
             function bunyikanPanggilan(teks, itemId) {
                 if (!('speechSynthesis' in window)) {
                     hapusQueuePanggilan(itemId);
                     return;
                 }
 
-                window.speechSynthesis.cancel();
+                try {
+                    window.speechSynthesis.cancel();
+                    window.speechSynthesis.resume();
+                } catch(e){}
 
                 var utterance = new SpeechSynthesisUtterance(teks);
                 utterance.lang = 'id-ID';
-                utterance.rate = 0.85;
+                utterance.rate = 0.8;
                 utterance.pitch = 1.0;
 
                 var isFinished = false;
@@ -277,28 +307,37 @@ elseif ($loket_aktif == '15') $nama_loket_teks = "SUPPLIER";
                 utterance.onend = selesai;
                 utterance.onerror = selesai;
 
-                setTimeout(selesai, 6000);
+                // Watchdog Timer Maksimal 7 Detik
+                voiceTimer = setTimeout(function() {
+                    selesai();
+                }, 7000);
 
                 window.speechSynthesis.speak(utterance);
             }
 
-            // Pengecekan Trigger Panggilan
+            // Pengecekan Antrian Panggilan
             function checkVoiceQueue() {
                 if (isSpeaking) return;
 
                 $.ajax({
-                    type: 'POST',
+                    type: 'GET',
                     url: 'get_panggilan.php',
-                    data: { loket: loket },
+                    data: { loket: loket, v: Math.random() },
                     dataType: 'json',
                     success: function(response) {
                         if (response.success && response.data && response.data.length > 0) {
                             var item = response.data[0];
                             var noAntrianRaw = item.antrian;
-                            var noAngka = noAntrianRaw.replace(/[^0-9]/g, '');
+                            var noAngka = parseInt(noAntrianRaw, 10);
+                            var driverName = item.nama_driver ? item.nama_driver.trim() : '';
                             
-                            // FORMAT PANGGILAN BARU
-                            var teksPanggilan = "Nomor Antrian " + noAngka + " Silahkan Menuju Loket";
+                            // Kalimat bersih tanpa tanda baca berlebihan yang rentan membuat Chrome mute
+                            var teksPanggilan = "";
+                            if (driverName !== '' && driverName !== '-') {
+                                teksPanggilan = "Nomor Antrian " + noAngka + " atas nama driver " + driverName + " silahkan menuju loket";
+                            } else {
+                                teksPanggilan = "Nomor Antrian " + noAngka + " silahkan menuju loket";
+                            }
 
                             isSpeaking = true;
                             bunyikanPanggilan(teksPanggilan, item.id);
@@ -312,7 +351,7 @@ elseif ($loket_aktif == '15') $nama_loket_teks = "SUPPLIER";
 
             setInterval(function() {
                 checkVoiceQueue();
-            }, 500);
+            }, 300);
 
             setInterval(function() {
                 fetchMonitorData();

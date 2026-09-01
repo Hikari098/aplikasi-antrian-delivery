@@ -1,41 +1,30 @@
 <?php
-header('Access-Control-Allow-Origin: *');
-header('Access-Control-Allow-Credentials: true');
-header("Access-Control-Allow-Headers: X-API-KEY, Origin, X-Requested-With, Content-Type, Accept, Access-Control-Request-Method");
-header('Access-Control-Allow-Methods: GET, POST');
-header("Allow: GET, POST");
+require_once "../../config/database.php";
 
-if (isset($_SERVER['REQUEST_METHOD']) && ($_SERVER['REQUEST_METHOD'] == 'POST' || $_SERVER['REQUEST_METHOD'] == 'GET')) {
-    
-    if (file_exists("../../config/database.php")) {
-        @include_once "../../config/database.php";
+date_default_timezone_set("Asia/Jakarta");
+$tanggal = date("Y-m-d");
+
+$conn = null;
+if (isset($mysqli) && $mysqli instanceof mysqli) { $conn = $mysqli; }
+elseif (isset($db) && $db instanceof mysqli) { $conn = $db; }
+elseif (isset($koneksi) && $koneksi instanceof mysqli) { $conn = $koneksi; }
+
+// Ambil nomor antrian paling terakhir yang terdaftar hari ini berdasarkan ID terbesar
+$query = mysqli_query($conn, "SELECT no_antrian FROM queue_antrian_admisi WHERE tanggal='$tanggal' ORDER BY id DESC LIMIT 1");
+$data  = mysqli_fetch_assoc($query);
+
+if ($data) {
+    $no_terakhir = (int)$data['no_antrian'];
+    // Jika antrian terakhir sudah >= 50, angka berikutnya yang siap diambil adalah 1 (001)
+    if ($no_terakhir >= 50) {
+        $no_berikutnya = 1;
+    } else {
+        $no_berikutnya = $no_terakhir + 1;
     }
-
-    $conn = null;
-    if (isset($mysqli) && $mysqli instanceof mysqli) { $conn = $mysqli; }
-    elseif (isset($db) && $db instanceof mysqli) { $conn = $db; }
-    elseif (isset($koneksi) && $koneksi instanceof mysqli) { $conn = $koneksi; }
-
-    date_default_timezone_set("Asia/Jakarta");
-    $tanggal = date("Y-m-d");
-
-    $nomor_berikutnya = 1;
-
-    try {
-        if ($conn && !$conn->connect_error) {
-            $query = @mysqli_query($conn, "SELECT max(no_antrian) as nomor FROM queue_antrian_admisi WHERE tanggal='$tanggal'");
-            
-            if ($query) {
-                $data = mysqli_fetch_assoc($query);
-                if ($data['nomor'] != null) {
-                    $nomor_berikutnya = (int)$data['nomor'] + 1;
-                }
-            }
-        }
-    } catch (\Throwable $e) {
-        $nomor_berikutnya = 1;
-    }
-
-    echo sprintf("%03d", $nomor_berikutnya);
+} else {
+    $no_berikutnya = 1;
 }
+
+// Format 3 digit angka (contoh: 001)
+echo str_pad($no_berikutnya, 3, "0", STR_PAD_LEFT);
 ?>

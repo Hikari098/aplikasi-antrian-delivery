@@ -130,11 +130,11 @@ $loket_aktif = isset($_GET['loket']) ? mysqli_real_escape_string($mysqli, $_GET[
                             <table class="table table-hover align-middle border-top" id="tabelAntrian">
                                 <thead class="table-light fw-bold text-secondary">
                                     <tr>
-                                        <th width="10%">Nomor</th>
+                                        <th width="8%">Nomor</th>
                                         <th>Nama Customer</th>
                                         <th>Nama Driver</th>
                                         <th>Plat Nomor</th>
-                                        <th>COUNTDOWN</th>
+                                        <th width="22%">COUNTDOWN / KETERANGAN</th>
                                         <th width="22%" class="text-center">Aksi Panggilan</th>
                                     </tr>
                                 </thead>
@@ -205,8 +205,8 @@ $loket_aktif = isset($_GET['loket']) ? mysqli_real_escape_string($mysqli, $_GET[
                                 var custName = val.nama_customer ? val.nama_customer : '-';
                                 var driverName = val.nama_driver ? val.nama_driver : '-';
                                 var platNo = (val.plat_nomor && val.plat_nomor !== 'undefined') ? val.plat_nomor : '-';
+                                var ketStatus = val.keterangan_status ? val.keterangan_status : 'Segera Dilayani';
 
-                                // --- LOGIKA HITUNG MUNDUR INDIVIDUAL (MAX 60 MENIT) ---
                                 var idAntrian = val.id;
                                 var timestampMasuk = 0;
 
@@ -223,16 +223,15 @@ $loket_aktif = isset($_GET['loket']) ? mysqli_real_escape_string($mysqli, $_GET[
                                 var selisihDetik = Math.floor((waktuSekarang - timestampMasuk) / 1000);
                                 if (selisihDetik < 0) selisihDetik = 0;
 
-                                var totalBatasDetik = 3600; // 60 Menit
+                                var totalBatasDetik = 3600;
                                 var sisaDetik = totalBatasDetik - selisihDetik;
-                                
                                 if (sisaDetik > totalBatasDetik) sisaDetik = totalBatasDetik;
 
                                 var isExpired = sisaDetik <= 0;
 
                                 var durasiTeks = "";
                                 if (isExpired) {
-                                    durasiTeks = "00:00 - SEGERA DILAYANI!";
+                                    durasiTeks = "00:00";
                                 } else {
                                     var menit = Math.floor(sisaDetik / 60);
                                     var detik = sisaDetik % 60;
@@ -249,19 +248,28 @@ $loket_aktif = isset($_GET['loket']) ? mysqli_real_escape_string($mysqli, $_GET[
                                 html += '<td>' + driverName + '</td>';
                                 html += '<td class="fw-bold text-uppercase">' + platNo + '</td>';
                                 
+                                html += '<td>';
                                 if(isExpired) {
-                                    html += '<td><span class="badge bg-danger text-white p-2 fs-6"><i class="bi-exclamation-triangle-fill me-1"></i> ' + durasiTeks + '</span></td>';
+                                    html += '<div class="input-group input-group-sm mb-1">';
+                                    html += '<span class="input-group-text bg-danger text-white fw-bold"><i class="bi-exclamation-triangle-fill"></i></span>';
+                                    html += '<select class="form-select form-select-sm fw-bold select-keterangan" data-id="'+val.id+'">';
+                                    html += '<option value="Segera Dilayani" ' + (ketStatus === 'Segera Dilayani' ? 'selected' : '') + '>1. Segera Dilayani</option>';
+                                    html += '<option value="Menunggu QC" ' + (ketStatus === 'Menunggu QC' ? 'selected' : '') + '>2. Menunggu QC</option>';
+                                    html += '<option value="Lain - lain" ' + (ketStatus === 'Lain - lain' ? 'selected' : '') + '>3. Lain - lain</option>';
+                                    html += '</select>';
+                                    html += '</div>';
                                 } else {
-                                    html += '<td><span class="badge bg-secondary text-white p-2 fs-6"><i class="bi-hourglass-split me-1"></i> ' + durasiTeks + '</span></td>';
+                                    html += '<span class="badge bg-secondary text-white p-2 fs-6"><i class="bi-hourglass-split me-1"></i> ' + durasiTeks + '</span>';
                                 }
+                                html += '</td>';
                                 
                                 html += '<td class="text-center">';
                                 if(val.status === '0') {
-                                    html += '<button class="btn btn-success btn-sm btn-panggil px-3 fw-bold rounded-pill shadow-sm" data-id="'+val.id+'" data-no="'+val.no_antrian+'">';
+                                    html += '<button class="btn btn-success btn-sm btn-panggil px-3 fw-bold rounded-pill shadow-sm" data-id="'+val.id+'" data-no="'+val.no_antrian+'" data-driver="'+driverName+'">';
                                     html += '<i class="bi-megaphone me-1"></i> Panggil';
                                     html += '</button>';
                                 } else if(val.status === '1') {
-                                    html += '<button class="btn btn-warning btn-sm btn-panggil-ulang px-3 fw-bold rounded-pill text-dark shadow-sm me-1" data-id="'+val.id+'" data-no="'+val.no_antrian+'" title="Panggil Ulang Suara di TV">';
+                                    html += '<button class="btn btn-warning btn-sm btn-panggil-ulang px-3 fw-bold rounded-pill text-dark shadow-sm me-1" data-id="'+val.id+'" data-no="'+val.no_antrian+'" data-driver="'+driverName+'" title="Panggil Ulang Suara di TV">';
                                     html += '<i class="bi-arrow-clockwise me-1"></i> Panggil Ulang';
                                     html += '</button>';
                                     html += '<button class="btn btn-primary btn-sm btn-selesai px-3 fw-bold rounded-pill shadow-sm" data-id="'+val.id+'" title="Selesaikan Layanan Driver Ini">';
@@ -279,42 +287,59 @@ $loket_aktif = isset($_GET['loket']) ? mysqli_real_escape_string($mysqli, $_GET[
                 });
             }
 
-            $(document).on('click', '.btn-panggil', function() {
+            $(document).on('change', '.select-keterangan', function() {
                 var id = $(this).data('id');
-                var no = $(this).data('no');
+                var ket = $(this).val();
                 
                 $.ajax({
                     type: 'POST',
-                    url: 'update.php',
-                    data: { id: id },
-                    success: function() {
-                        $.ajax({
-                            type: 'POST',
-                            url: 'create_panggilan.php',
-                            data: { antrian: no, loket: loket },
-                            success: function() {
-                                loadCounter();
-                                loadTabel();
-                            }
-                        });
-                    }
+                    url: 'update_keterangan.php',
+                    data: { id: id, keterangan: ket }
                 });
             });
 
-            $(document).on('click', '.btn-panggil-ulang', function() {
-                var no = $(this).data('no');
+            // Tombol Panggil
+            $(document).on('click', '.btn-panggil', function() {
+                var id     = $(this).data('id');
+                var no     = $(this).data('no');
+                var driver = $(this).data('driver');
                 
                 $.ajax({
                     type: 'POST',
                     url: 'create_panggilan.php',
-                    data: { antrian: no, loket: loket },
-                    success: function() {
+                    data: { antrian: no, loket: loket, nama_driver: driver },
+                    dataType: 'json'
+                });
+
+                $.ajax({
+                    type: 'POST',
+                    url: 'update.php',
+                    data: { id: id },
+                    complete: function() {
                         loadCounter();
                         loadTabel();
                     }
                 });
             });
 
+            // Tombol Panggil Ulang
+            $(document).on('click', '.btn-panggil-ulang', function() {
+                var no     = $(this).data('no');
+                var driver = $(this).data('driver');
+                
+                $.ajax({
+                    type: 'POST',
+                    url: 'create_panggilan.php',
+                    data: { antrian: no, loket: loket, nama_driver: driver },
+                    dataType: 'json',
+                    complete: function() {
+                        loadCounter();
+                        loadTabel();
+                    }
+                });
+            });
+
+            // Tombol Selesai
             $(document).on('click', '.btn-selesai', function() {
                 var id = $(this).data('id');
                 

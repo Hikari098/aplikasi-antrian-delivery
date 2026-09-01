@@ -27,21 +27,29 @@ $id_loket      = isset($_POST['id_loket']) ? mysqli_real_escape_string($conn, tr
 date_default_timezone_set("Asia/Jakarta");
 $tanggal = date("Y-m-d");
 
-// Bersihkan data live hari kemarin agar penomoran mereset dari 1 setiap pagi
-mysqli_query($conn, "DELETE FROM queue_antrian_admisi WHERE tanggal < '$tanggal'");
+// 1. Ambil nomor antrian terakhir yang terdaftar HARI INI berdasarkan id paling akhir
+$query_no = mysqli_query($conn, "SELECT no_antrian FROM queue_antrian_admisi WHERE tanggal = '$tanggal' ORDER BY id DESC LIMIT 1");
+$data_no  = mysqli_fetch_assoc($query_no);
 
-// Hitung nomor urutan antrian berjalan hari ini
-$query = mysqli_query($conn, "SELECT COUNT(*) as total FROM queue_antrian_admisi WHERE tanggal='$tanggal'");
-$data = mysqli_fetch_assoc($query);
-$total_antrian = ($data) ? (int)$data['total'] : 0;
-$no_antrian = $total_antrian + 1;
+if ($data_no) {
+    $no_terakhir = (int)$data_no['no_antrian'];
+    
+    // Jika nomor antrian terakhir sudah 50 atau lebih, RESET KEMBALI KE 1
+    if ($no_terakhir >= 50) {
+        $no_antrian = 1;
+    } else {
+        $no_antrian = $no_terakhir + 1;
+    }
+} else {
+    $no_antrian = 1;
+}
 
-// FIX UTAMA: Menghapus id_loket dari query INSERT tabel admisi karena kolom tersebut tidak ada di struktur database kamu
+// 2. Simpan data antrian baru ke tabel admisi
 $insert = mysqli_query($conn, "INSERT INTO queue_antrian_admisi(tanggal, no_antrian, status, nama_customer, nama_driver, plat_nomor) 
                                VALUES('$tanggal', '$no_antrian', '0', '$nama_customer', '$nama_driver', '$plat_nomor')");
           
 if ($insert) {
-    // History tetap mencatat id_loket dengan aman karena kolomnya terdaftar resmi di DB kamu
+    // 3. Catat riwayat ke queue_antrian_history dengan id_loket yang lengkap
     mysqli_query($conn, "INSERT INTO queue_antrian_history(tanggal, no_antrian, nama_customer, nama_driver, plat_nomor, id_loket) 
                          VALUES('$tanggal', '$no_antrian', '$nama_customer', '$nama_driver', '$plat_nomor', '$id_loket')");
     
