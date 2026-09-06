@@ -1,43 +1,119 @@
 <?php
-require_once "../../config/database.php";
-
 date_default_timezone_set("Asia/Jakarta");
-$tanggal = date("Y-m-d");
 
-if ($_SERVER["REQUEST_METHOD"] == "POST") {
-    $nama_customer = mysqli_real_escape_string($mysqli, $_POST['nama_customer']);
-    $nama_driver   = mysqli_real_escape_string($mysqli, $_POST['nama_driver']);
-    $plat_nomor    = mysqli_real_escape_string($mysqli, $_POST['plat_nomor']);
-    $id_loket      = isset($_POST['id_loket']) ? mysqli_real_escape_string($mysqli, $_POST['id_loket']) : (isset($_POST['loket']) ? mysqli_real_escape_string($mysqli, $_POST['loket']) : '');
+if (file_exists("../../config/database.php")) {
+    include "../../config/database.php";
+}
 
-    // 1. Ambil nomor antrian terakhir yang terdaftar hari ini
-    $query_no = mysqli_query($mysqli, "SELECT no_antrian FROM queue_antrian_admisi WHERE tanggal = '$tanggal' ORDER BY id DESC LIMIT 1");
-    $data_no  = mysqli_fetch_assoc($query_no);
+$conn = null;
+if (isset($mysqli) && !$mysqli->connect_error) { $conn = $mysqli; }
+elseif (isset($db) && !$db->connect_error) { $conn = $db; }
+elseif (isset($koneksi) && !$koneksi->connect_error) { $conn = $koneksi; }
 
-    if ($data_no) {
-        $no_terakhir = (int)$data_no['no_antrian'];
-        
-        // 2. Jika antrian terakhir sudah 50 atau lebih, reset kembali ke 1
-        if ($no_terakhir >= 50) {
-            $no_antrian = 1;
+if (!$conn) {
+    echo "Koneksi database gagal!";
+    exit;
+}
+
+$action = isset($_POST['action']) ? $_POST['action'] : '';
+
+// -------------------------------------------------------------------
+// 1. PROSES TAMBAH & UBAH MANUAL (AJAX dari tambah_ubah.php)
+// -------------------------------------------------------------------
+if ($action == 'tambah' || $action == 'ubah') {
+    $id = isset($_POST['id']) ? (int)$_POST['id'] : 0;
+    $nama_customer = isset($_POST['nama_customer']) ? mysqli_real_escape_string($conn, trim($_POST['nama_customer'])) : '';
+
+    if (empty($nama_customer)) {
+        echo "Nama customer tidak boleh kosong!";
+        exit;
+    }
+
+    if ($action == 'tambah') {
+        // Cek apakah data nama customer sudah ada sebelumnya
+        $cek = mysqli_query($conn, "SELECT id FROM master_customer WHERE LOWER(nama_customer) = LOWER('$nama_customer')");
+        if (mysqli_num_rows($cek) > 0) {
+            echo "Data customer '$nama_customer' sudah terdaftar di database!";
+            exit;
+        }
+
+        $query = mysqli_query($conn, "INSERT INTO master_customer (nama_customer) VALUES ('$nama_customer')");
+    } else {
+        $query = mysqli_query($conn, "UPDATE master_customer SET nama_customer = '$nama_customer' WHERE id = $id");
+    }
+
+    if ($query) {
+        echo "Sukses";
+    } else {
+        echo "Gagal menyimpan data ke database: " . mysqli_error($conn);
+    }
+    exit;
+}
+
+// -------------------------------------------------------------------
+// 2. PROSES IMPORT FILE EXPLORER (CSV / TXT)
+// -------------------------------------------------------------------
+elseif ($action == 'import_file') {
+    if (isset($_FILES['file_customer']['tmp_name']) && !empty($_FILES['file_customer']['tmp_name'])) {
+        $file = $_FILES['file_customer']['tmp_name'];
+        $handle = fopen($file, "r");
+
+        $jumlah_baru = 0;
+        $jumlah_dobel = 0;
+
+        if ($handle) {
+            while (($line = fgets($handle)) !== false) {
+                // Bersihkan karakter aneh / baris baru
+                $nama = trim(str_replace(array("\r", "\n", '"'), '', $line));
+                
+                if (!empty($nama)) {
+                    $nama_clean = mysqli_real_escape_string($conn, $nama);
+                    
+                    // Cek duplikasi data
+                    $cek = mysqli_query($conn, "SELECT id FROM master_customer WHERE LOWER(nama_customer) = LOWER('$nama_clean')");
+                    
+                    if (mysqli_num_rows($cek) == 0) {
+                        $ins = mysqli_query($conn, "INSERT INTO master_customer (nama_customer) VALUES ('$nama_clean')");
+                        if ($ins) {
+                            $jumlah_baru++;
+                        }
+                    } else {
+                        $jumlah_dobel++;
+                    }
+                }
+            }
+            fclose($handle);
+
+            echo "Sukses|" . $jumlah_baru . "|" . $jumlah_dobel;
         } else {
-            $no_antrian = $no_terakhir + 1;
+            echo "Gagal membaca file!";
         }
     } else {
-        // Jika belum ada antrian sama sekali hari ini
-        $no_antrian = 1;
+        echo "Silakan pilih file terlebih dahulu!";
     }
-
-    // 3. Simpan data antrian baru ke database
-    $query_insert = "INSERT INTO queue_antrian_admisi (tanggal, no_antrian, status, nama_customer, nama_driver, plat_nomor, id_loket, updated_date) 
-                     VALUES ('$tanggal', '$no_antrian', '0', '$nama_customer', '$nama_driver', '$plat_nomor', '$id_loket', NOW())";
-
-    if (mysqli_query($mysqli, $query_insert)) {
-        header("Location: index.php?status=success&no=" . $no_antrian);
-        exit();
-    } else {
-        header("Location: index.php?status=error");
-        exit();
-    }
+    exit;
 }
+
+// -------------------------------------------------------------------
+// 3. PROSES HAPUS DATA
+// -------------------------------------------------------------------
+elseif ($action == 'hapus') {
+    $id = isset($_POST['id']) ? (int)$_POST['id'] : 0;
+
+    if ($id > 0) {
+        $query = mysqli_query($conn, "DELETE FROM master_customer WHERE id = $id");
+        if ($query) {
+            echo "Sukses";
+        } else {
+            echo "Gagal menghapus data: " . mysqli_error($conn);
+        }
+    } else {
+        echo "ID tidak valid!";
+    }
+    exit;
+}
+
+// Default fallback
+echo "Aksi tidak dikenali!";
+exit;
 ?>

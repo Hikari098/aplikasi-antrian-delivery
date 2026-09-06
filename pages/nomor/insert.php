@@ -24,33 +24,35 @@ $nama_driver   = isset($_POST['nama_driver'])   ? mysqli_real_escape_string($con
 $plat_nomor    = isset($_POST['plat_nomor'])    ? mysqli_real_escape_string($conn, strtoupper(trim($_POST['plat_nomor']))) : '';
 $id_loket      = isset($_POST['id_loket'])      ? mysqli_real_escape_string($conn, trim($_POST['id_loket'])) : ''; 
 
+if (empty($id_loket)) {
+    echo "Error: ID Loket tujuan harus dipilih!";
+    exit;
+}
+
 date_default_timezone_set("Asia/Jakarta");
 $tanggal = date("Y-m-d");
 $jam_sekarang = date("H:i:s");
 
-// Reset harian admisi
-mysqli_query($conn, "DELETE FROM queue_antrian_admisi WHERE tanggal < '$tanggal'");
-
-// Hitung no antrian
+// Ambil no_antrian terakhir di tabel admisi aktif hari ini
 $query_no = mysqli_query($conn, "SELECT no_antrian FROM queue_antrian_admisi WHERE tanggal = '$tanggal' ORDER BY id DESC LIMIT 1");
 $data_no  = mysqli_fetch_assoc($query_no);
 
 if ($data_no) {
     $no_terakhir = (int)$data_no['no_antrian'];
+    // Reset ke 1 jika sudah mencapai 50, tanpa membatasi pengambilan
     $no_antrian  = ($no_terakhir >= 50) ? 1 : ($no_terakhir + 1);
 } else {
     $no_antrian = 1;
 }
 
-// 1. Simpan ke admisi live
-$insert = mysqli_query($conn, "INSERT INTO queue_antrian_admisi(tanggal, no_antrian, status, nama_customer, nama_driver, plat_nomor) 
-                               VALUES('$tanggal', '$no_antrian', '0', '$nama_customer', '$nama_driver', '$plat_nomor')");
+// 1. Simpan ke tabel antrian aktif (admisi)
+$insert_admisi = mysqli_query($conn, "INSERT INTO queue_antrian_admisi(tanggal, no_antrian, status, id_loket, nama_customer, nama_driver, plat_nomor) 
+                                      VALUES('$tanggal', '$no_antrian', '0', '$id_loket', '$nama_customer', '$nama_driver', '$plat_nomor')");
           
-if ($insert) {
-    // 2. Simpan/Update ke history dengan mencatat jam_input (ON DUPLICATE UPDATE agar tidak ada baris ganda)
+if ($insert_admisi) {
+    // 2. Simpan MURNI ke history (Selalu menambah baris baru dengan Primary Key Auto-Increment)
     mysqli_query($conn, "INSERT INTO queue_antrian_history(tanggal, jam_input, no_antrian, nama_customer, nama_driver, plat_nomor, id_loket) 
-                         VALUES('$tanggal', '$jam_sekarang', '$no_antrian', '$nama_customer', '$nama_driver', '$plat_nomor', '$id_loket')
-                         ON DUPLICATE KEY UPDATE jam_input='$jam_sekarang', nama_customer='$nama_customer', nama_driver='$nama_driver', plat_nomor='$plat_nomor', id_loket='$id_loket'");
+                         VALUES('$tanggal', '$jam_sekarang', '$no_antrian', '$nama_customer', '$nama_driver', '$plat_nomor', '$id_loket')");
     
     echo "Sukses";
 } else {

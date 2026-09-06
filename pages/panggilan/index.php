@@ -180,7 +180,6 @@ $loket_aktif = isset($_GET['loket']) ? mysqli_real_escape_string($mysqli, $_GET[
 
     <?php if (!empty($loket_aktif)): ?>
     <script type="text/javascript">
-        if (!window.antrianTimestamps) window.antrianTimestamps = {};
         var isSelectingDropdown = false;
 
         $(document).ready(function() {
@@ -212,27 +211,19 @@ $loket_aktif = isset($_GET['loket']) ? mysqli_real_escape_string($mysqli, $_GET[
                                 var platNo = (val.plat_nomor && val.plat_nomor !== 'undefined') ? val.plat_nomor : '-';
                                 var ketStatus = val.keterangan_status ? val.keterangan_status : 'Segera Dilayani';
 
-                                var idAntrian = val.id;
-                                var timestampMasuk = 0;
-
-                                if (val.timestamp && val.timestamp > 0) {
-                                    timestampMasuk = val.timestamp * 1000;
-                                } else {
-                                    if (!window.antrianTimestamps[idAntrian]) {
-                                        window.antrianTimestamps[idAntrian] = new Date().getTime();
-                                    }
-                                    timestampMasuk = window.antrianTimestamps[idAntrian];
-                                }
-
+                                // Hitung countdown presisi dari timestamp database
+                                var timestampMasuk = (val.timestamp && val.timestamp > 0) ? (val.timestamp * 1000) : new Date().getTime();
                                 var waktuSekarang = new Date().getTime();
                                 var selisihDetik = Math.floor((waktuSekarang - timestampMasuk) / 1000);
                                 if (selisihDetik < 0) selisihDetik = 0;
 
-                                var totalBatasDetik = 3600;
+                                var totalBatasDetik = 3600; // 1 Jam
                                 var sisaDetik = totalBatasDetik - selisihDetik;
-                                if (sisaDetik > totalBatasDetik) sisaDetik = totalBatasDetik;
 
                                 var isExpired = sisaDetik <= 0;
+                                if (isExpired) {
+                                    sisaDetik = 0;
+                                }
 
                                 var durasiTeks = "";
                                 if (isExpired) {
@@ -274,7 +265,6 @@ $loket_aktif = isset($_GET['loket']) ? mysqli_real_escape_string($mysqli, $_GET[
                                     html += '<i class="bi-megaphone me-1"></i> Panggil';
                                     html += '</button>';
                                 } else {
-                                    // PERBAIKAN: Tampilkan tombol Panggil Ulang & Selesai untuk semua status yang sudah pernah dipanggil (status 1, 2, dll)
                                     html += '<button class="btn btn-warning btn-sm btn-panggil-ulang px-3 fw-bold rounded-pill text-dark shadow-sm me-1" data-id="'+val.id+'" data-no="'+val.no_antrian+'" data-customer="'+custName+'" data-driver="'+driverName+'" title="Panggil Ulang Suara di TV">';
                                     html += '<i class="bi-arrow-clockwise me-1"></i> Panggil Ulang';
                                     html += '</button>';

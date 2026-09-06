@@ -6,18 +6,26 @@ $tanggal = date("Y-m-d");
 
 $loket_aktif = isset($_GET['loket']) ? mysqli_real_escape_string($mysqli, $_GET['loket']) : '';
 
-// Filter: Hanya tampilkan data antrian hari ini yang statusnya BELUM SELESAI (status != '2')
+// Ambil data antrian aktif hari ini yang belum selesai (status '0' & '1')
 if (!empty($loket_aktif)) {
-    $query_str = "SELECT * FROM queue_antrian_admisi 
-                  WHERE tanggal = '$tanggal' 
-                    AND (status = '0' OR status = '1')
-                    AND (id_loket = '$loket_aktif' OR id_loket IS NULL OR id_loket = '') 
-                  ORDER BY id ASC";
+    $query_str = "SELECT a.*, 
+                    (SELECT h.jam_input FROM queue_antrian_history h 
+                     WHERE h.no_antrian = a.no_antrian AND h.tanggal = a.tanggal AND h.id_loket = a.id_loket 
+                     ORDER BY h.id DESC LIMIT 1) AS jam_input
+                  FROM queue_antrian_admisi a
+                  WHERE a.tanggal = '$tanggal' 
+                    AND a.status IN ('0', '1')
+                    AND a.id_loket = '$loket_aktif' 
+                  ORDER BY a.id ASC";
 } else {
-    $query_str = "SELECT * FROM queue_antrian_admisi 
-                  WHERE tanggal = '$tanggal' 
-                    AND (status = '0' OR status = '1')
-                  ORDER BY id ASC";
+    $query_str = "SELECT a.*, 
+                    (SELECT h.jam_input FROM queue_antrian_history h 
+                     WHERE h.no_antrian = a.no_antrian AND h.tanggal = a.tanggal AND h.id_loket = a.id_loket 
+                     ORDER BY h.id DESC LIMIT 1) AS jam_input
+                  FROM queue_antrian_admisi a
+                  WHERE a.tanggal = '$tanggal' 
+                    AND a.status IN ('0', '1')
+                  ORDER BY a.id ASC";
 }
 
 $query = mysqli_query($mysqli, $query_str);
@@ -34,10 +42,22 @@ if ($query && mysqli_num_rows($query) > 0) {
         $data['plat_nomor']        = isset($row["plat_nomor"]) ? $row["plat_nomor"] : "";
         $data['status']            = isset($row["status"]) ? $row["status"] : "0";
         $data['keterangan_status'] = (isset($row["keterangan_status"]) && !empty($row["keterangan_status"])) ? $row["keterangan_status"] : "Segera Dilayani";
-        $data['timestamp']         = isset($row["updated_date"]) ? strtotime($row["updated_date"]) : 0;
+        
+        // Ambil timestamp riil dari jam_input transaksi spesifik
+        if (!empty($row["jam_input"])) {
+            $data['timestamp'] = strtotime($tanggal . ' ' . $row["jam_input"]);
+        } elseif (isset($row["updated_date"]) && !empty($row["updated_date"])) {
+            $data['timestamp'] = strtotime($row["updated_date"]);
+        } else {
+            $data['timestamp'] = time();
+        }
         
         array_push($response["data"], $data);
     }
+} else {
+    $data = array();
+    $data['no_antrian'] = '-';
+    array_push($response["data"], $data);
 }
 
 header('Content-Type: application/json');

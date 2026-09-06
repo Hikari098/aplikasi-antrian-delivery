@@ -121,8 +121,8 @@ elseif ($loket_aktif == '15') $nama_loket_teks = "SUPPLIER";
                                         <th width="15%">NO. ANTRIAN</th>
                                         <th width="32%">NAMA CUSTOMER</th>
                                         <th width="23%">NAMA DRIVER</th>
-                                        <th width="15%">COUNTDOWN</th>
-                                        <th width="15%">STATUS</th>
+                                        <th width="18%">COUNTDOWN / KET</th>
+                                        <th width="12%">STATUS</th>
                                     </tr>
                                 </thead>
                                 <tbody>
@@ -145,8 +145,6 @@ elseif ($loket_aktif == '15') $nama_loket_teks = "SUPPLIER";
     <script src="../../assets/vendor/js/bootstrap.min.js"></script>
 
     <script type="text/javascript">
-        if (!window.antrianTimestamps) window.antrianTimestamps = {};
-
         $(document).ready(function() {
             var loket = "<?php echo $loket_aktif; ?>";
             var isSpeaking = false;
@@ -192,28 +190,21 @@ elseif ($loket_aktif == '15') $nama_loket_teks = "SUPPLIER";
                             $.each(response.data, function(i, val) {
                                 var custName = val.nama_customer ? val.nama_customer : '-';
                                 var driverName = val.nama_driver ? val.nama_driver : '-';
+                                var ketStatus = val.keterangan_status ? val.keterangan_status : 'Segera Dilayani';
 
-                                var idAntrian = val.id;
-                                var timestampMasuk = 0;
-
-                                if (val.timestamp && val.timestamp > 0) {
-                                    timestampMasuk = val.timestamp * 1000;
-                                } else {
-                                    if (!window.antrianTimestamps[idAntrian]) {
-                                        window.antrianTimestamps[idAntrian] = new Date().getTime();
-                                    }
-                                    timestampMasuk = window.antrianTimestamps[idAntrian];
-                                }
-
+                                // Hitung countdown dari timestamp riil database
+                                var timestampMasuk = (val.timestamp && val.timestamp > 0) ? (val.timestamp * 1000) : new Date().getTime();
                                 var waktuSekarang = new Date().getTime();
                                 var selisihDetik = Math.floor((waktuSekarang - timestampMasuk) / 1000);
                                 if (selisihDetik < 0) selisihDetik = 0;
 
-                                var totalBatasDetik = 3600;
+                                var totalBatasDetik = 3600; // 1 Jam
                                 var sisaDetik = totalBatasDetik - selisihDetik;
-                                if (sisaDetik > totalBatasDetik) sisaDetik = totalBatasDetik;
 
                                 var isExpired = sisaDetik <= 0;
+                                if (isExpired) {
+                                    sisaDetik = 0;
+                                }
 
                                 var durasiTeks = "";
                                 if (isExpired) {
@@ -236,8 +227,12 @@ elseif ($loket_aktif == '15') $nama_loket_teks = "SUPPLIER";
                                 html += '<td class="fw-bold text-center fs-4">' + custName + '</td>';
                                 html += '<td class="text-center fs-4">' + driverName + '</td>';
                                 
+                                // TAMPILAN KETERANGAN STATUS DI MONITOR TV
                                 if(isExpired) {
-                                    html += '<td class="text-center"><span class="badge bg-danger fs-5 px-3 py-2"><i class="bi-exclamation-triangle-fill me-1"></i> ' + durasiTeks + '</span></td>';
+                                    html += '<td class="text-center">';
+                                    html += '<span class="badge bg-danger fs-5 px-3 py-2 d-inline-block mb-1"><i class="bi-exclamation-triangle-fill me-1"></i> ' + durasiTeks + '</span><br>';
+                                    html += '<span class="badge bg-dark fs-6 px-2 py-1 text-uppercase">' + ketStatus + '</span>';
+                                    html += '</td>';
                                 } else {
                                     html += '<td class="text-center"><span class="badge bg-dark fs-5 px-3 py-2"><i class="bi-hourglass-split me-1"></i> ' + durasiTeks + '</span></td>';
                                 }
@@ -269,14 +264,12 @@ elseif ($loket_aktif == '15') $nama_loket_teks = "SUPPLIER";
                 });
             }
 
-            // ZERO-DELAY SPEECH ENGINE FIX
             function bunyikanPanggilan(teks, itemId) {
                 if (!('speechSynthesis' in window)) {
                     hapusQueuePanggilan(itemId);
                     return;
                 }
 
-                // Forced Cancel Segera: Bersihkan antrean suara lama yang menggantung
                 window.speechSynthesis.cancel();
                 if (window.speechSynthesis.paused) {
                     window.speechSynthesis.resume();
@@ -302,7 +295,6 @@ elseif ($loket_aktif == '15') $nama_loket_teks = "SUPPLIER";
                     selesai();
                 }, 5000);
 
-                // Bunyikan langsung tanpa setTimeout bertingkat
                 window.speechSynthesis.speak(utterance);
             }
 
