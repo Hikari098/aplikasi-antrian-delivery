@@ -1,0 +1,1 @@
+DELETE FROM queue_antrian_history WHERE (jam_input IS NULL OR jam_input = '' OR jam_input = '00:00:00' OR jam_input = '-') AND jam_selesai IS NOT NULL;

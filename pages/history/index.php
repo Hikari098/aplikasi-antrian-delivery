@@ -30,35 +30,19 @@ $loket_arr = array(
     <link href="../../assets/css/style.css" rel="stylesheet">
 
     <style>
-        /* CSS Khusus Mode Cetak PDF / Print Document */
         @media print {
-            .no-print {
-                display: none !important;
-            }
-            body {
-                background-color: #ffffff !important;
-                color: #000000 !important;
-            }
-            .card {
-                border: none !important;
-                box-shadow: none !important;
-            }
-            .table-success {
-                background-color: #198754 !important;
-                color: #ffffff !important;
-                -webkit-print-color-adjust: exact;
-            }
-            .badge {
-                border: 1px solid #000 !important;
-                color: #000 !important;
-            }
+            .no-print { display: none !important; }
+            body { background-color: #ffffff !important; color: #000000 !important; }
+            .card { border: none !important; box-shadow: none !important; }
+            .table-success { background-color: #198754 !important; color: #ffffff !important; -webkit-print-color-adjust: exact; }
+            .badge { border: 1px solid #000 !important; color: #000 !important; }
         }
     </style>
 </head>
 
 <body class="d-flex flex-column h-100 bg-light">
 
-    <!-- HEADER SYSTEM (Sembunyi saat dicetak PDF) -->
+    <!-- HEADER SYSTEM -->
     <header class="bg-success text-white py-3 shadow-sm no-print">
         <div class="container-fluid px-4 d-flex justify-content-between align-items-center">
             <h4 class="fw-bold mb-0"><i class="bi-clock-history me-2"></i> HISTORY & REKAP ANTRIAN DELIVERY</h4>
@@ -72,7 +56,7 @@ $loket_arr = array(
     <main class="flex-grow-1 p-4">
         <div class="container-fluid">
             
-            <!-- FORM FILTER TANGGAL (Sembunyi saat dicetak PDF) -->
+            <!-- FORM FILTER TANGGAL -->
             <div class="card border-0 shadow-sm rounded-3 mb-4 no-print">
                 <div class="card-body p-3">
                     <form method="GET" action="index.php" class="row g-3 align-items-center">
@@ -131,9 +115,9 @@ $loket_arr = array(
                         </thead>
                         <tbody>
                             <?php
-                            // Query Anti-Dobel: Menggabungkan baris yang memiliki pendaftaran & penyelesaian transaksi yang sama
+                            // Query Penggabungan Pintar: Menyatukan Jam Input & Jam Selesai berdasarkan transaksi riil
                             $query_str = "SELECT 
-                                            MIN(id) AS id,
+                                            MAX(id) AS id,
                                             tanggal,
                                             no_antrian,
                                             nama_customer,
@@ -145,7 +129,7 @@ $loket_arr = array(
                                           FROM queue_antrian_history 
                                           WHERE tanggal BETWEEN '$tgl_mulai' AND '$tgl_selesai' 
                                           GROUP BY tanggal, no_antrian, id_loket, nama_customer, nama_driver, plat_nomor
-                                          ORDER BY tanggal DESC, no_antrian DESC, id DESC";
+                                          ORDER BY MAX(id) DESC";
 
                             $query_history = mysqli_query($mysqli, $query_str);
 

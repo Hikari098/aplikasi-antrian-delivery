@@ -6,25 +6,47 @@ $tanggal = date("Y-m-d");
 
 $loket_aktif = isset($_GET['loket']) ? mysqli_real_escape_string($mysqli, $_GET['loket']) : '';
 
-// Ambil data antrian aktif hari ini yang belum selesai (status '0' & '1')
+// Query aman tanpa pemanggilan kolom created_date yang tidak ada di database
 if (!empty($loket_aktif)) {
-    $query_str = "SELECT a.*, 
-                    (SELECT h.jam_input FROM queue_antrian_history h 
-                     WHERE h.no_antrian = a.no_antrian AND h.tanggal = a.tanggal AND h.id_loket = a.id_loket 
-                     ORDER BY h.id DESC LIMIT 1) AS jam_input
+    $query_str = "SELECT 
+                    a.id,
+                    a.no_antrian,
+                    a.nama_customer,
+                    a.nama_driver,
+                    a.plat_nomor,
+                    a.status,
+                    a.keterangan_status,
+                    a.updated_date,
+                    MAX(h.jam_input) AS jam_input
                   FROM queue_antrian_admisi a
+                  LEFT JOIN queue_antrian_history h 
+                    ON a.no_antrian = h.no_antrian 
+                   AND a.tanggal = h.tanggal 
+                   AND a.id_loket = h.id_loket
                   WHERE a.tanggal = '$tanggal' 
                     AND a.status IN ('0', '1')
                     AND a.id_loket = '$loket_aktif' 
+                  GROUP BY a.id
                   ORDER BY a.id ASC";
 } else {
-    $query_str = "SELECT a.*, 
-                    (SELECT h.jam_input FROM queue_antrian_history h 
-                     WHERE h.no_antrian = a.no_antrian AND h.tanggal = a.tanggal AND h.id_loket = a.id_loket 
-                     ORDER BY h.id DESC LIMIT 1) AS jam_input
+    $query_str = "SELECT 
+                    a.id,
+                    a.no_antrian,
+                    a.nama_customer,
+                    a.nama_driver,
+                    a.plat_nomor,
+                    a.status,
+                    a.keterangan_status,
+                    a.updated_date,
+                    MAX(h.jam_input) AS jam_input
                   FROM queue_antrian_admisi a
+                  LEFT JOIN queue_antrian_history h 
+                    ON a.no_antrian = h.no_antrian 
+                   AND a.tanggal = h.tanggal 
+                   AND a.id_loket = h.id_loket
                   WHERE a.tanggal = '$tanggal' 
                     AND a.status IN ('0', '1')
+                  GROUP BY a.id
                   ORDER BY a.id ASC";
 }
 
@@ -43,11 +65,9 @@ if ($query && mysqli_num_rows($query) > 0) {
         $data['status']            = isset($row["status"]) ? $row["status"] : "0";
         $data['keterangan_status'] = (isset($row["keterangan_status"]) && !empty($row["keterangan_status"])) ? $row["keterangan_status"] : "Segera Dilayani";
         
-        // Ambil timestamp riil dari jam_input transaksi spesifik
-        if (!empty($row["jam_input"])) {
+        // Membaca timestamp countdown riil dari jam_input pendaftaran history
+        if (!empty($row["jam_input"]) && $row["jam_input"] != '00:00:00') {
             $data['timestamp'] = strtotime($tanggal . ' ' . $row["jam_input"]);
-        } elseif (isset($row["updated_date"]) && !empty($row["updated_date"])) {
-            $data['timestamp'] = strtotime($row["updated_date"]);
         } else {
             $data['timestamp'] = time();
         }
