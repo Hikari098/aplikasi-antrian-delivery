@@ -6,12 +6,31 @@ if (file_exists("../../config/database.php")) {
 }
 
 $master_customers = [];
+$master_drivers   = [];
+$master_plats     = [];
 
 if (isset($mysqli) && !$mysqli->connect_error) {
+    // Ambil data master customer
     $query_master_cust = mysqli_query($mysqli, "SELECT nama_customer FROM master_customer ORDER BY nama_customer ASC");
     if ($query_master_cust) {
         while ($cust = mysqli_fetch_assoc($query_master_cust)) {
             $master_customers[] = $cust['nama_customer'];
+        }
+    }
+
+    // Ambil data master driver
+    $query_master_drv = mysqli_query($mysqli, "SELECT nama_driver FROM master_driver ORDER BY nama_driver ASC");
+    if ($query_master_drv) {
+        while ($drv = mysqli_fetch_assoc($query_master_drv)) {
+            $master_drivers[] = $drv['nama_driver'];
+        }
+    }
+
+    // Ambil data master plat nomor
+    $query_master_plt = mysqli_query($mysqli, "SELECT plat_nomor FROM master_plat ORDER BY plat_nomor ASC");
+    if ($query_master_plt) {
+        while ($plt = mysqli_fetch_assoc($query_master_plt)) {
+            $master_plats[] = $plt['plat_nomor'];
         }
     }
 }
@@ -79,11 +98,24 @@ if (isset($mysqli) && !$mysqli->connect_error) {
                                 
                                 <div class="mb-3">
                                     <label for="nama_driver" class="form-label fw-bold">Nama Driver</label>
-                                    <input type="text" class="form-control form-control-lg" name="nama_driver" id="nama_driver" placeholder="Masukkan nama driver" autocomplete="off" required>
+                                    <input type="text" class="form-control form-control-lg" name="nama_driver" id="nama_driver" placeholder="Masukkan nama driver" list="rekomendasi_driver" autocomplete="off" required>
+                                    
+                                    <datalist id="rekomendasi_driver">
+                                        <?php foreach ($master_drivers as $nama_d): ?>
+                                            <option value="<?= htmlspecialchars($nama_d) ?>">
+                                        <?php endforeach; ?>
+                                    </datalist>
                                 </div>
+
                                 <div class="mb-4">
                                     <label for="plat_nomor" class="form-label fw-bold">Plat Nomor Kendaraan</label>
-                                    <input type="text" class="form-control form-control-lg" name="plat_nomor" id="plat_nomor" placeholder="Contoh: B 1234 ABC" style="text-transform: uppercase;" autocomplete="off" required>
+                                    <input type="text" class="form-control form-control-lg" name="plat_nomor" id="plat_nomor" placeholder="Contoh: B 1234 ABC" list="rekomendasi_plat" style="text-transform: uppercase;" autocomplete="off" required>
+                                    
+                                    <datalist id="rekomendasi_plat">
+                                        <?php foreach ($master_plats as $plat_p): ?>
+                                            <option value="<?= htmlspecialchars($plat_p) ?>">
+                                        <?php endforeach; ?>
+                                    </datalist>
                                 </div>
 
                                 <div class="mb-4">
