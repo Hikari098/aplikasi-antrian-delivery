@@ -15,16 +15,12 @@ $data  = mysqli_fetch_assoc($query);
 
 if ($data) {
     $no_terakhir = (int)$data['no_antrian'];
-    // Jika antrian terakhir sudah >= 50, angka berikutnya yang siap diambil adalah 1 (001)
-    if ($no_terakhir >= 50) {
-        $no_berikutnya = 1;
-    } else {
-        $no_berikutnya = $no_terakhir + 1;
-    }
+    // Angka berikutnya akan terus bertambah kontinu tanpa reset ke 1
+    $no_berikutnya = $no_terakhir + 1;
 } else {
     $no_berikutnya = 1;
 }
 
-// Format 3 digit angka (contoh: 001)
+// Format 3 digit angka (contoh: 051, 052, dst)
 echo str_pad($no_berikutnya, 3, "0", STR_PAD_LEFT);
 ?>
